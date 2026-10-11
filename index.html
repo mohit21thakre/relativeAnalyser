@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Relative Analyser</title>
+<style>
+:root{--bg:#f6f3ec;--card:#fffdf8;--ink:#221f1a;--mut:#7a7366;--line:#d9d2c3;--acc:#2f6b4f;--m:#dbe8f3;--f:#f5dde3;--u:#ece7da;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17150f;--card:#211e17;--ink:#efe9db;--mut:#a39b8a;--line:#3a3529;--acc:#6fbf98;--m:#243645;--f:#43262e;--u:#2d2a21}}
+:root[data-theme="dark"]{--bg:#17150f;--card:#211e17;--ink:#efe9db;--mut:#a39b8a;--line:#3a3529;--acc:#6fbf98;--m:#243645;--f:#43262e;--u:#2d2a21}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+[hidden]{display:none!important}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
+h1{font:600 19px Georgia,"Times New Roman",serif;margin:0;letter-spacing:.2px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 12px;cursor:pointer}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.del{color:#b3402e}
+nav{display:flex;gap:6px;padding:0 14px 8px}
+nav button{flex:1;border-radius:20px}
+nav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+main{flex:1;position:relative;min-height:0}
+section{position:absolute;inset:0;overflow:auto;padding:0 14px 14px}
+#tree{padding:0;overflow:hidden}
+#svg{width:100%;height:100%;touch-action:none;display:block;cursor:grab}
+.e{fill:none;stroke:var(--mut);stroke-width:1.5;opacity:.7}
+.e.s{stroke:var(--acc);stroke-width:2;opacity:.9}
+.n{cursor:pointer}
+.n rect{stroke:var(--line);stroke-width:1.2;fill:var(--u)}
+.n.M rect{fill:var(--m)}.n.F rect{fill:var(--f)}
+.n.sel rect{stroke:var(--acc);stroke-width:3}
+.n text{fill:var(--ink);font-size:12.5px;text-anchor:middle;pointer-events:none}
+.n text.d{fill:var(--mut);font-size:10.5px}
+.zoom{position:absolute;right:12px;top:8px;display:flex;flex-direction:column;gap:6px}
+.zoom button{width:38px;padding:6px 0}
+#empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;color:var(--mut);padding:30px}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:16px;width:100%;box-sizing:border-box}
+.row{display:flex;gap:8px;margin-bottom:8px}.row>*{flex:1;min-width:0}
+.person{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:8px;cursor:pointer}
+.person small,.mut{color:var(--mut)}
+#sheet{position:fixed;left:0;right:0;bottom:0;max-height:58vh;overflow:auto;background:var(--card);border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px rgba(0,0,0,.18)}
+.chip{display:inline-block;padding:2px 9px;margin:2px 3px 2px 0;border-radius:14px;border:1px solid var(--line);background:var(--bg);font-size:13px}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.lbl{font-size:12px;color:var(--mut);margin:6px 0 3px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:20px;font-size:14px;z-index:9}
+textarea{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;white-space:pre;height:200px;margin-top:10px}
+label.btn{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 12px;cursor:pointer}
+h2{font:600 17px system-ui,sans-serif;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px}
+.card.hl{border-left:5px solid var(--acc)}
+.badge{display:inline-block;background:var(--acc);color:#fff;border-radius:14px;padding:3px 12px;font-weight:600;font-size:14px}
+.big{font:600 32px Georgia,"Times New Roman",serif;margin:8px 0 2px}
+.st{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}
+.pn{border:1px solid var(--line);border-radius:10px;padding:7px 12px;background:var(--bg)}
+.pn.hit{border-color:var(--acc);background:var(--m)}
+.ar{font:600 13px ui-monospace,Menlo,Consolas,monospace;color:var(--acc);padding:4px 8px;background:var(--bg);border-radius:6px}
+.pk{position:relative}
+.pl{position:absolute;left:0;right:0;top:100%;z-index:20;max-height:240px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.22);margin-top:2px}
+.it,.it2{padding:10px 12px;border-bottom:1px solid var(--line)}
+.it:active{background:var(--m)}
+.tb{position:absolute;left:10px;right:62px;top:8px;display:flex;gap:6px;z-index:5}
+.tb input{padding:7px 10px;font-size:15px}.tb button{white-space:nowrap}
+.n circle{stroke:var(--line);stroke-width:1.2;fill:var(--u)}
+.n.M circle{fill:var(--m)}.n.F circle{fill:var(--f)}
+.n.ctr circle{stroke:var(--acc);stroke-width:4}.n.sel circle{stroke:var(--acc);stroke-width:3}
+.n text.i{font-size:16px;font-weight:600}.n text.r{fill:var(--acc);font-size:10.5px}
+.ring{fill:none;stroke:var(--line);stroke-dasharray:3 6}.e.d{stroke-dasharray:4 4}
+.e.x{stroke-dasharray:6 4;opacity:.95;stroke-width:2.6}
+.el{font-size:10px;fill:var(--mut);text-anchor:middle;paint-order:stroke;stroke:var(--bg);stroke-width:4px}.pb{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;margin:0;padding:8px 12px}
+.rb{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 10px}
+.rb input{flex:1;padding:0;border:0;background:none;accent-color:var(--acc)}.rb button{padding:6px 12px}
+#sheet{z-index:10}
+.l0 .n text{display:none}.l0 .n circle{r:28px}.l1 .n text.d{display:none}
+</style></head>
+<body>
+<header><h1>Relative Analyser</h1><button class="pri" data-act="new">+ Person</button></header>
+<nav><button data-tab="tree" class="on">Tree</button><button data-tab="people">People</button><button data-tab="rel">Relation</button><button data-tab="data">Data</button></nav>
+<main>
+<section id="tree"><svg id="svg"><g id="vp"></g></svg>
+<div id="empty" hidden><div style="font-size:42px">🌳</div><div>No relatives yet.<br>Add the first person, or import a file in the Data tab.</div><button class="pri" data-act="new">Add first person</button></div>
+<div class="tb"><div class="pk" style="flex:1"><input id="sf" placeholder="Search a person…" autocomplete="off"><div class="pl" id="lf" hidden></div></div><button id="mb" data-act="mode">Full tree</button></div>
+<div id="pb" class="card pb" hidden></div>
+<div id="rotbar" class="rb" hidden><button data-act="rl" title="Rotate left">⟲</button><input id="rot" type="range" min="-180" max="180" step="1" value="0"><button data-act="rr" title="Rotate right">⟳</button><button data-act="r0">0°</button><button data-act="snd" id="sndb">🔊</button></div>
+<div class="zoom"><button data-act="zi">+</button><button data-act="zo">−</button><button data-act="fit">⤢</button></div></section>
+<section id="people" hidden><input id="q" placeholder="Search people…"><div id="list"></div></section>
+<section id="rel" hidden>
+<div class="card" style="margin-top:0"><h2>Select Family Members</h2>
+<div class="lbl">PERSON A (REFERENCE)</div><div class="pk"><input id="sa" placeholder="Search person A…" autocomplete="off"><div class="pl" id="la" hidden></div></div><select id="ra" hidden></select>
+<div class="lbl">PERSON B (TARGET RELATIVE)</div><div class="pk"><input id="sb" placeholder="Search person B…" autocomplete="off"><div class="pl" id="lb" hidden></div></div><select id="rb" hidden></select>
+<div class="acts"><button data-act="swap">⇄ Swap A and B</button></div></div>
+<div id="rres"></div></section>
+<section id="data" hidden>
+<p id="stat" style="margin:4px 0 10px"></p>
+<div class="acts"><button class="pri" data-act="dl">Download CSV</button><button data-act="cp">Copy CSV</button><label class="btn">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
+<textarea id="csv" readonly></textarea>
+<div class="lbl" style="margin-top:14px">Can't pick a file? Paste CSV or .ftt text here:</div><textarea id="paste" style="height:90px" placeholder="Paste here, then tap Import pasted text"></textarea>
+<div class="acts"><button data-act="ip">Import pasted text</button></div>
+<p class="mut" style="font-size:13px">One row per person. <b>parent_ids</b> and <b>spouse_ids</b> hold ids of other rows, separated by “;”. That flat format imports easily into spreadsheets, databases or other family-tree apps. Importing replaces current data (a backup is kept). Data is also kept in this browser, so export regularly.</p>
+</section>
+</main>
+<div id="sheet" hidden></div>
+<div id="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s),KEY='relative-analyser-v1',W=124,NH=46,H=130,GS=14,GU=34;
+let P={},sel=null,pos={},view={x:0,y:0,k:1,r:0},needFit=1,tt,mode='focus',foc=null,pedge={},rp=null,lastRel=null,snd=true;
+const uid=()=>'P'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nm=p=>((p.first||'')+' '+(p.last||'')).trim()||'(unnamed)';
+const dates=p=>p.birth&&p.death?p.birth+' – '+p.death:p.birth?'b. '+p.birth:p.death?'d. '+p.death:'';
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)};
+function add(o){const p={id:uid(),first:'',last:'',gender:'',birth:'',death:'',place:'',notes:'',par:[],sp:[],...o};P[p.id]=p;return p}
+function link(a,b){if(!a.sp.includes(b.id))a.sp.push(b.id);if(!b.sp.includes(a.id))b.sp.push(a.id)}
+function clean(n){for(const p of Object.values(n)){p.par=[...new Set(p.par.filter(x=>n[x]&&x!=p.id))].slice(0,2);p.sp=p.sp.filter(x=>n[x]&&x!=p.id)}
+ for(const p of Object.values(n))for(const s of p.sp)if(!n[s].sp.includes(p.id))n[s].sp.push(p.id);return n}
+
+/* ---------- full tree: ONE linked fan chart. Rings = generations; each family branch is a wedge; marriages between branches are dashed links ---------- */
+const SLOT=64,RS=86,XPAL=['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4','#0aa5a5','#f032e6','#a0522d','#9aa000','#e6a800','#1b9e77','#6a5acd'];let LC={};
+function build(){const ids=Object.keys(P),g={},seen={},loc={},comp={};let nc=0;
+ /* true generation numbers: child = parent+1, spouse = same, per connected group */
+ ids.forEach(s0=>{if(s0 in g)return;g[s0]=0;comp[s0]=nc;const q=[s0];
+  for(let i=0;i<q.length;i++){const u=q[i],p=P[u];for(const[x,dg]of[...p.par.map(x=>[x,-1]),...kidsOf(u).map(x=>[x,1]),...p.sp.map(x=>[x,0])])if(P[x]&&!(x in g)){g[x]=g[u]+dg;comp[x]=nc;q.push(x)}}
+  for(let n=0;n<60;n++){let ch=0;for(const i of q){const p=P[i];/* keep every child below its parents even if the data has a generation-skipping marriage */
+   for(const x of p.par)if(P[x]&&g[i]<g[x]+1){g[i]=g[x]+1;ch=1}
+   for(const x of p.sp)if(P[x]&&g[i]<g[x]){g[i]=g[x];ch=1}}if(!ch)break}
+  const m=Math.min(...q.map(x=>g[x]));q.forEach(x=>g[x]-=m);nc++});
+ const unit=id=>{const u=[id];seen[id]=1;for(let i=0;i<u.length;i++)for(const s of P[u[i]].sp)if(P[s]&&!seen[s]){seen[s]=1;u.push(s)}return u};
+ const mk=(id,ti)=>{const u=unit(id),nd={u,g:g[id],k:[],ti,c:comp[id]};u.forEach(m=>loc[m]=nd);
+  ids.filter(c=>!seen[c]&&P[c].par.some(q=>u.includes(q))).forEach(c=>{if(!seen[c]){const x=mk(c,ti);x.up=nd;x.via=c;nd.k.push(x)}});return nd};
+ const hp=i=>P[i].par.some(q=>P[q]),roots=[];
+ ids.filter(i=>!hp(i)&&!P[i].sp.some(s=>P[s]&&hp(s))).forEach(i=>{if(!seen[i])roots.push(mk(i,roots.length))});
+ ids.forEach(i=>{if(!seen[i])roots.push(mk(i,roots.length))});
+ /* links = a person whose parents sit in a different branch (e.g. someone who married in) */
+ const cl=[];for(const p of ids)for(const q of P[p].par)if(P[q]){const a=loc[p],b=loc[q];if(!(a.up===b&&a.via===p)&&!cl.some(z=>z[0]==p&&z[1]===b))cl.push([p,b,a])}
+ return{roots,cl}}
+const cnt=n=>n.u.length+n.k.reduce((a,x)=>a+cnt(x),0);
+function order(rs,cl){if(rs.length<2)return rs;const by={},ad={};rs.forEach(r=>{by[r.ti]=r;ad[r.ti]=[]});
+ cl.forEach(z=>{const s=z[2].ti,t=z[1].ti;if(by[s]&&by[t]&&s!=t){ad[s].push(t);ad[t].push(s)}});
+ const seq=[rs.slice().sort((a,b)=>cnt(b)-cnt(a))[0]],seen={[seq[0].ti]:1};
+ for(let i=0;i<seq.length;i++)ad[seq[i].ti].forEach(t=>{if(!seen[t]){seen[t]=1;seq.push(by[t])}});
+ rs.forEach(r=>{if(!seen[r.ti])seq.push(r)});return seq}
+/* each generation ring (dotted) and the people on it share one colour, so a generation is easy to follow around the chart */
+const RP=['#e76f51','#2a9d8f','#e9a820','#6a4c93','#1982c4','#7cb518','#ff595e','#ff924c'];let GC={};
+const fnode=(id,x,y)=>{const p=P[id],t=nm(p),d=dates(p);return `<g class="n ${p.gender} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><g class="u" transform="rotate(${-view.r})"><circle r="17"${LC[id]||GC[id]?` style="stroke:${LC[id]||GC[id]};stroke-width:${LC[id]?3.5:2.4}"`:''}/><text class="i" y="5">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="32">${esc(t.length>13?t.slice(0,12)+'…':t)}</text>${d?`<text class="d" y="44">${esc(d)}</text>`:''}</g></g>`};
+function fan(rts,cl){const single=rts.length==1,base=single?rts[0].g:-1,all=[],T=2*Math.PI,pq={};const E=[];let ex='',rg='',lk='',nh='',xl='';
+ const dem=n=>{n.d=n.g-base;all.push(n);n.k.forEach(dem);const S=n.k.reduce((a,x)=>a+x.w,0);n.w=n.d?Math.max(SLOT*n.u.length/(n.d*RS),S):S||1},
+ span=(n,a0,a1)=>{n.a0=a0;n.a1=a1;const S=n.k.reduce((a,x)=>a+x.w,0);let a=a0;n.k.forEach(x=>{const e=a+(a1-a0)*x.w/S;span(x,a,e);a=e})};
+ rts.forEach(dem);const Wt=rts.reduce((a,x)=>a+x.w,0);let a0=-Math.PI/2;rts.forEach(x=>{const e=a0+T*x.w/Wt;span(x,a0,e);a0=e});
+ const f=Math.max(1,Wt/T),D=Math.max(...all.map(n=>n.d)),SET=new Set(all);
+ all.forEach(n=>{const m=n.u.length,t=(n.a0+n.a1)/2,r=f*n.d*RS;n.t=t;n.r=r;n.c={x:Math.cos(t)*r,y:Math.sin(t)*r};
+  n.q=n.u.map((id,i)=>{const o=i-(m-1)/2;if(!r)return[id,o*SLOT,0];const b=t+o*SLOT/r;return[id,Math.cos(b)*r,Math.sin(b)*r]});
+  for(let i=1;i<m;i++){ex+=`<path class="e s" d="M${n.q[i-1][1]} ${n.q[i-1][2]}L${n.q[i][1]} ${n.q[i][2]}"/>`;E.push({c:'e s',p:[[n.q[i-1][1],n.q[i-1][2]],[n.q[i][1],n.q[i][2]]]})}
+  n.q.forEach(q=>{pq[q[0]]=q;if(n.d)GC[q[0]]=RP[(n.d-1)%RP.length];nh+=fnode(q[0],q[1],q[2])})});
+ all.forEach(n=>n.k.forEach(x=>{const rm=(n.r+x.r)/2,pt=[[n.c.x,n.c.y]];if(n.r&&Math.abs(x.t-n.t)>=.002){const m=Math.max(2,Math.ceil(Math.abs(x.t-n.t)/.12));for(let j=0;j<=m;j++){const a=n.t+(x.t-n.t)*j/m;pt.push([Math.cos(a)*rm,Math.sin(a)*rm])}}pt.push([x.c.x,x.c.y]);E.push({c:'e',p:pt});let d=`M${n.c.x} ${n.c.y}`;
+  if(!n.r||Math.abs(x.t-n.t)<.002)d+=`L${x.c.x} ${x.c.y}`;
+  else d+=`L${Math.cos(n.t)*rm} ${Math.sin(n.t)*rm}A${rm} ${rm} 0 0 ${x.t>n.t?1:0} ${Math.cos(x.t)*rm} ${Math.sin(x.t)*rm}L${x.c.x} ${x.c.y}`;
+  lk+=`<path class="e" d="${d}"/>`}));
+ cl.forEach(z=>{const p=pq[z[0]],c=z[1].c;if(p&&SET.has(z[1])){const cx=(p[1]+c.x)/4,cy=(p[2]+c.y)/4,pt=[];for(let j=0;j<=10;j++){const t=j/10,u=1-t;pt.push([u*u*p[1]+2*t*u*cx+t*t*c.x,u*u*p[2]+2*t*u*cy+t*t*c.y])}E.push({c:'e x',p:pt})}if(p&&SET.has(z[1]))xl+=`<path class="e x" style="stroke:${z.col}" d="M${p[1]} ${p[2]}Q${(p[1]+c.x)/4} ${(p[2]+c.y)/4} ${c.x} ${c.y}"/>`});
+ for(let d=1;d<=D;d++)rg+=`<circle class="ring" style="stroke:${RP[(d-1)%RP.length]};stroke-width:2.4;opacity:.85" r="${f*d*RS}"/>`;
+ return{R:Math.max(f*D*RS+62,rts[0].u.length*SLOT/2+30),h:rg+lk+xl+ex+nh,p:all.flatMap(n=>n.q),f,D,E}}
+const kidsOf=id=>Object.values(P).filter(c=>c.par.includes(id)).map(c=>c.id);
+function draw(){if(mode=='focus'&&!P[foc])foc=Object.keys(P)[0]||null;if(mode=='path'&&(!rp||!P[rp.A]||!P[rp.B]||rp.st.some(z=>!P[z.n])))mode='focus';mode=='path'?drawPath():mode=='focus'&&foc?drawFocus():drawFull();$('#pb').hidden=mode!='path';$('#rotbar').hidden=mode!='full';$('#empty').hidden=Object.keys(P).length>0;$('#mb').textContent=mode=='focus'?'Full tree':'Network'}
+/* Network view: chosen person in the centre, parents above, spouse right, siblings left, children below, outer ring = grandparents / uncles-aunts / grandchildren */
+function drawFocus(){const c=P[foc],used={[foc]:1},it=[],R1=125,R2=235,rad=d=>d*Math.PI/180,uq=a=>[...new Set(a)].filter(i=>P[i]&&!used[i]),
+ add=(ids,a0,a1,r,role,from,dash)=>{ids=uq(ids);ids.forEach(i=>used[i]=1);const cap=Math.max(1,Math.floor(rad(a1-a0)*r/92));
+  for(let k=0;k*cap<ids.length;k++){const row=ids.slice(k*cap,k*cap+cap);row.forEach((id,j)=>it.push({id,a:row.length==1?(a0+a1)/2:a0+(a1-a0)*(j+.5)/row.length,r:r+k*82,role:role(P[id].gender),from:from(id)||foc,dash}))}},
+ par=c.par.filter(i=>P[i]),ch=kidsOf(foc),gp=par.flatMap(i=>P[i].par);
+ add(par,225,315,R1,g=>gx(g,'Father','Mother','Parent'),()=>foc);
+ add(c.sp,-20,20,R1,g=>gx(g,'Husband','Wife','Spouse'),()=>foc,'s');
+ add(par.flatMap(kidsOf),160,200,R1,g=>gx(g,'Brother','Sister','Sibling'),()=>foc,'d');
+  add(gp,235,305,R2,g=>gx(g,'Grandfather','Grandmother','Grandparent'),id=>par.find(p=>P[p].par.includes(id)));
+ const un=uq(gp.flatMap(kidsOf)),fu=id=>par.find(p=>P[p].par.some(x=>P[id].par.includes(x))),ur=g=>gx(g,'Uncle','Aunt','Uncle/Aunt');
+ add(un.filter((_,i)=>i%2==0),185,230,R2,ur,fu,'d');add(un.filter((_,i)=>i%2),310,355,R2,ur,fu,'d');
+ /* descendants stay circular: each child owns an angular wedge (sized by its own children); its children sit in the same wedge on the outer ring, so lines never cross between families */
+ const kd=uq(ch);kd.forEach(i=>used[i]=1);const gk={};kd.forEach(c=>{gk[c]=uq(kidsOf(c));gk[c].forEach(i=>used[i]=1)});
+ const wt=kd.map(c=>Math.max(1,gk[c].length)),WT=wt.reduce((a,b)=>a+b,0)||1,lv=kd.length>8?3:2,GR2=R1+(lv-1)*64+95,span=Math.min(170,Math.max(70,22*kd.length+30));let ang0=90-span/2;
+ kd.forEach((c,i)=>{const w=span*wt[i]/WT,m=ang0+w/2;ang0+=w;it.push({id:c,a:m,r:R1+(i%lv)*64,role:gx(P[c].gender,'Son','Daughter','Child'),from:foc});
+  const g=gk[c],cap=Math.max(1,Math.floor(rad(w)*GR2/88));
+  g.forEach((x,j)=>{const row=Math.floor(j/cap),inRow=Math.min(cap,g.length-row*cap),col=j%cap;it.push({id:x,a:inRow==1?m:m-w/2+w*(col+.5)/inRow,r:GR2+row*78,role:gx(P[x].gender,'Grandson','Granddaughter','Grandchild'),from:c})})});
+ const Q={[foc]:{x:0,y:0}};it.forEach(o=>Q[o.id]={x:Math.cos(rad(o.a))*o.r,y:Math.sin(rad(o.a))*o.r});
+ pos={};for(const i in Q)pos[i]={x:Q[i].x-W/2,y:Q[i].y-NH/2};
+ let s=`<circle class="ring" r="${R1}"/><circle class="ring" r="${R2}"/>`,n='';
+ it.forEach(o=>{const a=Q[o.from]||Q[foc],b=Q[o.id];s+=`<path class="e ${o.dash||''}" d="M${a.x} ${a.y}L${b.x} ${b.y}"/>`});
+ const node=(id,role)=>{const p=P[id],t=nm(p),k=id==foc;return `<g class="n ${p.gender} ${k?'ctr':''} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${Q[id].x},${Q[id].y})"><circle r="${k?28:21}"/><text class="i" y="${k?7:5}">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="${k?46:36}">${esc(t.length>16?t.slice(0,15)+'…':t)}</text><text class="${k?'d':'r'}" y="${k?59:48}">${esc(k?dates(p):role)}</text></g>`};
+ for(const i in Q)n+=node(i,(it.find(o=>o.id==i)||{}).role);
+ if(!it.length)n+='<text y="100" style="text-anchor:middle;fill:var(--mut);font-size:12px">No relatives linked yet — tap the person to add some</text>';
+ $('#vp').innerHTML=s+n}
+function focusOn(id){if(!P[id])return;foc=id;mode='focus';sel=null;$('#sheet').hidden=true;draw();fit();syF&&syF()}
+function tap(id){if(id&&(mode=='path'||(mode=='focus'&&id!=foc)))focusOn(id);else select(id)}
+/* Connection view: just the people on the A-to-B path, ancestors rising and descendants falling, so the shared ancestor / marriage link is visible */
+function drawPath(){const A=rp.A,st=rp.st,ids=[A,...st.map(z=>z.n)],X=96,Y=112,pt=[{x:0,y:0}];let gy=0;
+ st.forEach((z,i)=>{gy+=z.t=='p'?-1:z.t=='c'?1:0;pt.push({x:(i+1)*X,y:gy*Y})});
+ pos={};ids.forEach((id,i)=>pos[id]={x:pt[i].x-W/2,y:pt[i].y-NH/2});let s='',n='';
+ st.forEach((z,i)=>{const a=pt[i],b=pt[i+1];s+=`<path class="e ${z.t=='s'?'s':''}" d="M${a.x} ${a.y}L${b.x} ${b.y}"/><text class="el" x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-5}">${LINK[z.t]}</text>`});
+ ids.forEach((id,i)=>{const p=P[id],t=nm(p),k=i==0||i==ids.length-1,c=i==0?'Person A':k?'Person B':role(st[i-1].t,p.gender);
+  n+=`<g class="n ${p.gender} ${k?'ctr':''}" data-id="${esc(id)}" transform="translate(${pt[i].x},${pt[i].y})"><circle r="${k?26:21}"/><text class="i" y="5">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="${k?43:36}">${esc(t.length>14?t.slice(0,13)+'…':t)}</text><text class="r" y="${k?56:48}">${esc(c.charAt(0).toUpperCase()+c.slice(1))}</text></g>`});
+ $('#vp').innerHTML=s+n;$('#pb').innerHTML=`<div style="font-size:13.5px">${esc(rp.sent)}</div><div class="acts" style="margin:6px 0 0"><button data-act="pclose">Show ${esc(nm(P[A]))}'s network</button></div>`}
+function drawFull(){const{roots,cl}=build();pos={};LC={};GC={};cl.forEach((z,i)=>{z.col=XPAL[i%XPAL.length];LC[z[0]]=z.col});if(!roots.length){$('#vp').innerHTML='';return}
+ const gr={};roots.forEach(r=>(gr[r.c]=gr[r.c]||[]).push(r));
+ const cs=Object.values(gr).map(rs=>fan(order(rs,cl),cl)).sort((x,y)=>y.R-x.R);
+ const tw=Math.max(2*cs[0].R,Math.sqrt(cs.reduce((a,c)=>a+4*c.R*c.R,0))*1.1);let x=0,y=0,rh=0,h='';
+ for(const c of cs){const w=2*c.R;if(x>0&&x+w>tw){x=0;y+=rh+24;rh=0}const cx=x+c.R,cy=y+c.R;rh=Math.max(rh,w);x+=w+24;
+  h+=`<g transform="translate(${cx},${cy})">${c.h}</g>`;c.p.forEach(q=>pos[q[0]]={x:cx+q[1]-W/2,y:cy+q[2]-NH/2})}
+ $('#vp').innerHTML=h}
+const apply=()=>{const R=mode=='full'?view.r:0;$('#vp').setAttribute('transform',`translate(${view.x},${view.y}) scale(${view.k}) rotate(${R})`);$('#svg').setAttribute('class',view.k<.35?'l0':view.k<.6?'l1':'');
+ if(mode=='full'){const t=`rotate(${-R})`;$('#vp').querySelectorAll('.u').forEach(e=>e.setAttribute('transform',t))}const sl=$('#rot');if(sl)sl.value=Math.round(view.r)};
+/* ratchet rotation: the chart turns in 5-degree notches, like a clicking gear, with a tick sound on every notch */
+const NOTCH=5;let rCur=0,rTgt=0,rAcc=0,lastQ=0,rPiv=[180,300],ra=0,AC=null,lastT=0;
+function wake(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume()}catch(e){}}
+function tick(){if(!snd)return;const n=performance.now();if(n-lastT<18)return;lastT=n;
+ try{wake();const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain(),o2=AC.createOscillator(),g2=AC.createGain();
+  o.type='square';o.frequency.setValueAtTime(1500+Math.random()*200,t);o.frequency.exponentialRampToValueAtTime(600,t+.02);g.gain.setValueAtTime(.05,t);g.gain.exponentialRampToValueAtTime(.001,t+.025);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.03);
+  o2.type='triangle';o2.frequency.setValueAtTime(230,t);o2.frequency.exponentialRampToValueAtTime(90,t+.04);g2.gain.setValueAtTime(.09,t);g2.gain.exponentialRampToValueAtTime(.001,t+.05);o2.connect(g2);g2.connect(AC.destination);o2.start(t);o2.stop(t+.06)}catch(e){}}
+function rotTo(t,px,py){rAcc=t;rTgt=Math.round(t/NOTCH)*NOTCH;rPiv=[px,py];if(!ra)ra=requestAnimationFrame(rAnim)}
+function rAnim(){ra=0;const dd=rTgt-rCur;if(Math.abs(dd)<.05){if(dd){rotAt(dd,rPiv[0],rPiv[1]);rCur=rTgt}return}
+ const st=Math.abs(dd)<1?dd:dd*.35;rotAt(st,rPiv[0],rPiv[1]);rCur+=st;const q=Math.round(rCur/NOTCH);if(q!=lastQ){lastQ=q;tick()}ra=requestAnimationFrame(rAnim)}
+/* rotate the whole chart by d degrees around screen point (px,py), keeping that point fixed */
+function rotAt(d,px,py){const t=view.r*Math.PI/180,dx=px-view.x,dy=py-view.y,wx=(dx*Math.cos(t)+dy*Math.sin(t))/view.k,wy=(-dx*Math.sin(t)+dy*Math.cos(t))/view.k;
+ view.r=((view.r+d+180)%360+360)%360-180;const u=view.r*Math.PI/180;view.x=px-view.k*(wx*Math.cos(u)-wy*Math.sin(u));view.y=py-view.k*(wx*Math.sin(u)+wy*Math.cos(u));apply()}
+function fit(){const v=Object.values(pos),r=$('#svg').getBoundingClientRect();if(!v.length||!r.width)return;view.r=0;rCur=rTgt=rAcc=lastQ=0;
+ const a=Math.min(...v.map(p=>p.x)),b=Math.max(...v.map(p=>p.x+W)),c=Math.min(...v.map(p=>p.y)),d=Math.max(...v.map(p=>p.y+NH));
+ view.k=Math.min(r.width/(b-a+40),(r.height-(mode=='path'?100:0))/(d-c+40),1.2);view.x=(r.width-(b-a)*view.k)/2-a*view.k;view.y=(r.height-(mode=='path'?100:0)-(d-c)*view.k)/2-c*view.k;apply();if(mode=='focus'&&view.k<.7){view.k=.7;view.x=r.width/2;view.y=r.height/2+26;apply()}}
+function zoomAt(f,cx,cy){f=Math.min(Math.max(f,.03/view.k),8/view.k);view.x=cx-(cx-view.x)*f;view.y=cy-(cy-view.y)*f;view.k*=f;apply()}
+function centerOn(id){if(mode!='full'){fit();return}const c=pos[id],r=$('#svg').getBoundingClientRect();if(!c)return;view.k=Math.max(view.k,.8);const t=view.r*Math.PI/180,wx=c.x+W/2,wy=c.y+NH/2;view.x=r.width/2-view.k*(wx*Math.cos(t)-wy*Math.sin(t));view.y=r.height*.22-view.k*(wx*Math.sin(t)+wy*Math.cos(t));apply()}
+
+/* ---------- selection / editor sheet ---------- */
+function select(id){sel=id&&P[id]?id:null;draw();sel?openSheet():($('#sheet').hidden=true)}
+const chips=ids=>ids.filter(i=>P[i]).map(i=>`<span class="chip" data-go="${esc(i)}">${esc(nm(P[i]))}</span>`).join('')||'<span class="mut">–</span>';
+function openSheet(){const p=P[sel],sh=$('#sheet'),kids=Object.values(P).filter(c=>c.par.includes(p.id)).map(c=>c.id);
+ const opts=Object.values(P).filter(o=>o.id!=p.id).sort((a,b)=>nm(a).localeCompare(nm(b))).map(o=>`<option value="${esc(o.id)}">${esc(nm(o))}${o.birth?' ('+esc(o.birth)+')':''}</option>`).join('');
+ sh.innerHTML=`<div class="row"><input data-f="first" placeholder="First name" value="${esc(p.first)}"><input data-f="last" placeholder="Surname" value="${esc(p.last)}"></div>
+ <div class="row"><select data-f="gender"><option value="">Gender: –</option><option value="M"${p.gender=='M'?' selected':''}>Male</option><option value="F"${p.gender=='F'?' selected':''}>Female</option></select><input data-f="birth" placeholder="Born (YYYY or YYYY-MM-DD)" value="${esc(p.birth)}"><input data-f="death" placeholder="Died" value="${esc(p.death)}"></div>
+ <div class="row"><input data-f="place" placeholder="Place" value="${esc(p.place)}"><input data-f="notes" placeholder="Notes" value="${esc(p.notes)}"></div>
+ <div class="lbl">Parents</div>${chips(p.par)}<div class="lbl">Spouse(s)</div>${chips(p.sp)}<div class="lbl">Children</div>${chips(kids)}
+ <div class="acts"><button data-act="par">+ Parent</button><button data-act="spo">+ Spouse</button><button data-act="chi">+ Child</button><button data-act="rel">Find relation</button><button data-act="net">View network</button></div>
+ <div class="lbl">Link an existing person as…</div><div class="row"><select id="lk"><option value="par">Parent</option><option value="spo">Spouse</option><option value="chi">Child</option></select><select id="lt">${opts}</select><button data-act="lnk" style="flex:0 0 auto">Link</button></div>
+ <div class="acts" style="justify-content:space-between"><button class="del" data-act="del">Delete</button><button data-act="close">Close</button></div>`;sh.hidden=false}
+function addRel(k){const c=P[sel];if(!c)return;let n;
+ if(k=='par'){if(c.par.length>=2)return toast('Already has two parents');n=add({});c.par.push(n.id);if(c.par.length==2)link(n,P[c.par[0]])}
+ else if(k=='chi')n=add({par:[c.id,...(c.sp.length==1?c.sp:[])]});
+ else{n=add({});link(c,n)}
+ save();select(n.id);centerOn(n.id);const f=$('#sheet [data-f=first]');f&&f.focus()}
+function linkExisting(){const c=P[sel],t=P[$('#lt').value],k=$('#lk').value;if(!c||!t)return;
+ if(k=='par'){if(c.par.length>=2||c.par.includes(t.id))return toast('Cannot add this parent');c.par.push(t.id);if(c.par.length==2)link(t,P[c.par[0]])}
+ else if(k=='chi'){if(t.par.length>=2||t.par.includes(c.id))return toast('Cannot add this child');t.par.push(c.id)}
+ else link(c,t);
+ save();draw();openSheet()}
+function del(){const id=sel;if(!id)return;delete P[id];for(const p of Object.values(P)){p.par=p.par.filter(x=>x!=id);p.sp=p.sp.filter(x=>x!=id)}save();select(null)}
+
+/* ---------- CSV ---------- */
+const HD=['id','first_name','last_name','gender','birth_date','death_date','parent_ids','spouse_ids','place','notes'];
+const cell=v=>/[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+const toCSV=()=>[HD.join(','),...Object.values(P).map(p=>[p.id,p.first,p.last,p.gender,p.birth,p.death,p.par.join(';'),p.sp.join(';'),p.place,p.notes].map(v=>cell(String(v??''))).join(','))].join('\r\n');
+function parseCSV(t){const r=[];let row=[],f='',q=0;for(let i=0;i<t.length;i++){const c=t[i];
+ if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=0}else f+=c}
+ else if(c=='"')q=1;else if(c==','){row.push(f);f=''}else if(c=='\n'){row.push(f);r.push(row);row=[];f=''}else if(c!='\r')f+=c}
+ if(f||row.length){row.push(f);r.push(row)}return r}
+function importCSV(t){const r=parseCSV(t.replace(/^\ufeff/,'')),h=r.shift().map(x=>x.trim().toLowerCase()),n={};
+ r.forEach(c=>{if(c.length<2)return;const g=k=>(c[h.indexOf(k)]||'').trim(),id=g('id')||uid(),sx=g('gender').toUpperCase().slice(0,1);
+  n[id]={id,first:g('first_name'),last:g('last_name'),gender:sx=='M'||sx=='F'?sx:'',birth:g('birth_date'),death:g('death_date'),place:g('place'),notes:g('notes'),par:g('parent_ids').split(';').filter(Boolean),sp:g('spouse_ids').split(';').filter(Boolean)}});
+ return clean(n)}
+/* .ftt: header line, then person rows (25 cols) and couple rows (12 cols); parents come from the couple a person is a child of */
+function importFTT(t){const L=t.split(/\r\n|\r|\n/).filter(x=>x.trim()).slice(1).map(l=>l.split('\t').map(s=>s.trim())),fam={},n={},per=[];
+ L.forEach(c=>{if(c.length>=16)per.push(c);else if(c.length>=6)fam[c[0]]=[c[2],c[4]]});
+ per.forEach(c=>{const d=o=>c[o]==128&&+c[o+1]?c[o+1]+(+c[o+2]?'-'+c[o+2].padStart(2,'0')+(+c[o+3]?'-'+c[o+3].padStart(2,'0'):''):''):'';
+  n[c[0]]={id:c[0],first:c[13]||'',last:c[12]||'',gender:{1:'M',2:'F'}[c[24]]||'',birth:d(16),death:d(20),notes:'',par:[],sp:[]}});
+ per.forEach(c=>{const f=fam[c[2]];if(f)n[c[0]].par=f.filter(x=>x!='0'&&n[x])});
+ for(const k in fam){const[a,b]=fam[k];if(n[a]&&n[b]&&a!=b)link(n[a],n[b])}
+ return clean(n)}
+function setData(n){try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch(e){}P=n;sel=null;foc=Object.keys(P)[0]||null;mode='focus';save();$('#sheet').hidden=true;draw();needFit=1;renderData();toast('Loaded '+Object.keys(P).length+' people')}
+
+/* ---------- views ---------- */
+function show(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==t));
+ ['tree','people','rel','data'].forEach(s=>$('#'+s).hidden=s!=t);if(t!='tree')$('#sheet').hidden=true;
+ if(t=='tree'&&needFit){fit();needFit=0}if(t=='people')renderList();if(t=='rel')fillRel();if(t=='data')renderData()}
+function renderList(){const q=$('#q').value.toLowerCase(),a=Object.values(P).filter(p=>nm(p).toLowerCase().includes(q)).sort((x,y)=>nm(x).localeCompare(nm(y)));
+ $('#list').innerHTML=a.map(p=>`<div class="person" data-go="${esc(p.id)}"><span>${esc(nm(p))}<br><small>${esc(dates(p))}</small></span><small>${p.par.length?'↑'+p.par.length+' ':''}${p.sp.length?'♥'+p.sp.length:''}</small></div>`).join('')||'<p class="mut">Nobody yet.</p>'}
+function renderData(){const a=Object.values(P);$('#stat').textContent=a.length+' people · '+a.reduce((s,p)=>s+p.sp.length,0)/2+' couples · '+a.reduce((s,p)=>s+p.par.length,0)+' parent links';$('#csv').value=toCSV()}
+async function download(){const d=window.claude?await claude.use('downloads'):null;
+ if(!d){try{const b=new Blob(['\ufeff'+toCSV()],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='relatives.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}catch(e){toast('Download unavailable here — copy the text instead')}return}
+ try{await d.save({filename:'relatives.csv',data:'\ufeff'+toCSV()})}catch(e){if(e.code!='declined')toast('Not saved ('+(e.code||'error')+') — copy the text instead')}}
+async function copy(){const t=toCSV();try{await navigator.clipboard.writeText(t);toast('CSV copied')}catch(e){const a=$('#csv');a.select();try{document.execCommand('copy');toast('CSV copied')}catch(x){toast('Select the text and copy it')}}}
+
+/* ---------- relation finder ---------- */
+const gx=(g,m,f,u)=>g=='M'?m:g=='F'?f:u,sd=c=>c=='M'?'Paternal ':c=='F'?'Maternal ':'';
+const lab=p=>{const par=p.par.filter(i=>P[i]).map(i=>P[i].first||'?').join(' & '),t=[{M:'Male',F:'Female'}[p.gender],p.place||(par&&'child of '+par)].filter(Boolean).join(', ');return nm(p)+(t?' ('+t+')':'')};
+/* key = path steps from A to B (p=parent, c=child, s=spouse); value = [badge, local (Hindi) term, English detail] */
+const KIN={
+ s:g=>['Spouse',gx(g,'Pati','Patni','Jeevansathi'),gx(g,'Husband','Wife','Spouse')],
+ p:g=>['Parent',gx(g,'Pita','Mata','Mata/Pita'),gx(g,'Father','Mother','Parent')],
+ c:g=>['Child',gx(g,'Beta','Beti','Beta/Beti'),gx(g,'Son','Daughter','Child')],
+ pc:g=>['Sibling',gx(g,'Bhai','Behen','Bhai/Behen'),gx(g,'Brother','Sister','Sibling')],
+ pp:(g,s)=>['Grandparent',s[0]=='M'?gx(g,'Dada','Dadi','Dada/Dadi'):gx(g,'Nana','Nani','Nana/Nani'),sd(s[0])+gx(g,'Grandfather','Grandmother','Grandparent')],
+ cc:(g,s)=>['Grandchild',s[0]=='M'?gx(g,'Pota','Poti','Pota/Poti'):gx(g,'Nati','Natin','Nati/Natin'),sd(s[0])+gx(g,'Grandson','Granddaughter','Grandchild')],
+ ppc:(g,s)=>['Uncle / Aunt',s[0]=='M'?gx(g,'Chacha/Tau','Buva','Chacha/Buva'):gx(g,'Mama','Mausi','Mama/Mausi'),sd(s[0])+gx(g,'Uncle','Aunt','Uncle/Aunt')],
+ pcc:(g,s)=>['Nephew / Niece',s[1]=='M'?gx(g,'Bhatija','Bhatiji','Bhatija/Bhatiji'):gx(g,'Bhanja','Bhanji','Bhanja/Bhanji'),gx(g,'Nephew','Niece','Nephew/Niece')+(s[1]=='M'?" (brother's child)":" (sister's child)")],
+ ppcc:(g,s)=>{const t=s[0]=='M',m=s[2]=='M',pre=t?(m?'Chachera':'Fufera'):(m?'Mamera':'Mausera'),u=t?(m?'Chacha/Tau':'Buva'):(m?'Mama':'Mausi');return['Cousin',g=='F'?pre.slice(0,-1)+'i Behen':pre+(g=='M'?' Bhai':' Bhai/Behen'),u+"'s "+gx(g,'son','daughter','child')]},
+ csp:g=>['Samdhi / Samdhan',gx(g,'Samdhi','Samdhan','Samdhi/Samdhan'),"Child's spouse's parent"],
+ sp:g=>['Parent-in-law',gx(g,'Sasur','Saas','Sasur/Saas'),gx(g,'Father-in-law','Mother-in-law','Parent-in-law')],
+ cs:g=>['Child-in-law',gx(g,'Damad','Bahu','Damad/Bahu'),gx(g,'Son-in-law','Daughter-in-law','Child-in-law')],
+ pcs:(g,s)=>['Sibling-in-law',s[1]=='M'?'Bhabhi':'Jija',"Sibling's spouse"],
+ spc:(g,s,a)=>['Sibling-in-law',a=='M'?gx(g,'Saala','Saali','Saala/Saali'):gx(g,'Devar/Jeth','Nanad','Devar/Nanad'),"Spouse's "+gx(g,'brother','sister','sibling')]
+};
+const GLS={ppcc:1,sp:1,cs:1,pcs:1,spc:1,csp:1},SIMPLE={p:1,c:1,s:1};
+function kin(k,s,g,a){if(KIN[k])return KIN[k](g,s,a);const n=k.length-2,t=/^p{3,}$/.test(k)?'Great-'+'great-'.repeat(n-1)+'grandparent':/^c{3,}$/.test(k)?'Great-'+'great-'.repeat(n-1)+'grandchild':'';
+ return t?(n>2?[t.includes('parent')?'Ancestor':'Descendant',null,k.length+' generations '+(t.includes('parent')?'up':'down')]:[t,null,t]):null}
+function relOf(st,g,a){const k=st.map(z=>z.t).join(''),r=kin(k,st.map(z=>P[z.n].gender),g,a);if(r)return r;
+ /* no exact kin term: name the relation by generation gap (Indian-style: same generation = bhai/behen, etc.) */
+ const d=[...k].reduce((x,t)=>x+(t=='p'?1:t=='c'?-1:0),0);let l=null,e=Math.abs(d)+' generations '+(d>0?'above':'below');
+ if(d==0){l=gx(g,'Bhai','Behen','Bhai/Behen');e='same generation (extended '+gx(g,'brother','sister','brother/sister')+')'}
+ else if(d==1){const x=k[0]=='p'?P[st[0].n].gender:'';l=x=='M'?gx(g,'Chacha/Tau','Buva/Chachi','Chacha/Buva'):x=='F'?gx(g,'Mama','Mausi/Mami','Mama/Mausi'):gx(g,'Chacha/Mama','Chachi/Mausi','Chacha/Mausi');e='one generation above (uncle/aunt level)'}
+ else if(d==2){const x=k[0]=='p'?P[st[0].n].gender:'';l=x=='M'?gx(g,'Dada','Dadi','Dada/Dadi'):x=='F'?gx(g,'Nana','Nani','Nana/Nani'):gx(g,'Dada/Nana','Dadi/Nani','Dada/Dadi');e='two generations above (grandparent level)'}
+ else if(d==-1){l=gx(g,'Bhatija/Bhanja','Bhatiji/Bhanji','Bhatija/Bhatiji');e='one generation below (nephew/niece level)'}
+ else if(d==-2){l=gx(g,'Pota/Nati','Poti/Natin','Pota/Poti');e='two generations below (grandchild level)'}
+ let cat='Distant relative';
+ if(k.length>2&&k[0]=='s'&&k.endsWith('s')&&d==0){const y=P[st[st.length-2].n].gender;
+  l=a=='F'?(y=='M'?'Jethani/Devrani':y=='F'?'Nandoi':'Jethani/Nandoi'):a=='M'?(y=='F'?'Saadhu':y=='M'?'Salhaj':'Saadhu/Salhaj'):'In-law relative';
+  cat='Sibling-in-law';e="spouse of the spouse's extended "+(y=='M'?'brother':y=='F'?'sister':'sibling')+(a=='F'&&y=='M'?' (co-sister-in-law, often called Bhabhi)':'')}
+ else
+ if(k[0]=='s'&&k.length>1&&d==0){l=a=='M'?gx(g,'Saala','Saali','Saala/Saali'):a=='F'?gx(g,'Devar/Jeth','Nanad','Devar/Nanad'):gx(g,'Saala/Devar','Saali/Nanad','In-law sibling');cat='Sibling-in-law';e="spouse's extended "+gx(g,'brother','sister','sibling')+' (same generation)'}
+ const X=k.length>1&&k.endsWith('s')&&k[0]!='s'?P[st[st.length-2].n].gender:null;
+ if(X!==null){const x=k[0]=='p'?P[st[0].n].gender:'';
+  if(d==0){l=X=='M'?'Bhabhi':X=='F'?'Jija':'Jija/Bhabhi';cat='Sibling-in-law';e='spouse of an extended '+(X=='M'?'brother':X=='F'?'sister':'sibling')+' (same generation)'}
+  else if(d==1){l=x=='M'?(X=='M'?'Chachi/Tai':X=='F'?'Phupha':'Chachi/Phupha'):x=='F'?(X=='M'?'Mami':X=='F'?'Mausa':'Mami/Mausa'):'Uncle/Aunt by marriage';e='spouse of an uncle/aunt-level relative'}
+  else if(d==-1){l=X=='M'?'Bahu':X=='F'?'Damad':'Bahu/Damad';e='spouse of a nephew/niece-level relative'}}
+ return[cat,l,'Indirect relation — '+e]}
+/* Describe B using kin terms: split the path into the fewest known kin-term segments, e.g. "X is father of A's Buva's Sasur" */
+function chain(A,st,a,b){const n=st.length,G=i=>P[i?st[i-1].n:A].gender,
+ seg=(i,j)=>{const t=st.slice(i,j),k=t.map(z=>z.t).join(''),r=kin(k,t.map(z=>P[z.n].gender),G(j),G(i));return r&&{k,r,w:k=='csp'?1.5:KIN[k]||pure?1:3}},f=[0],pv=[],pure=/^(p+|c+)$/.test(st.map(z=>z.t).join(''));
+ for(let j=1;j<=n;j++){f[j]=1e9;for(let i=0;i<j;i++){const x=seg(i,j);if(x&&f[i]+x.w<f[j]){f[j]=f[i]+x.w;pv[j]=i}}}
+ let last=0;for(let i=n-1;i>=0;i--){const x=seg(i,n);if(x&&f[i]+x.w==f[n]){last=i;break}}
+ const txt=(i,j)=>{const{k,r}=seg(i,j),e=r[2].toLowerCase();return SIMPLE[k]||!r[1]?e:GLS[k]?r[1]+'/'+e:r[1]};
+ if(!last){const{k,r}=seg(0,n);return `${b} is ${a}'s ${SIMPLE[k]||!r[1]?r[2].toLowerCase():r[1]+' ('+r[2].toLowerCase()+')'}.`}
+ const S=[];for(let j=last;j>0;j=pv[j])S.unshift([pv[j],j]);
+ return `${b} is ${txt(last,n)} of ${a}'s ${S.map(x=>txt(x[0],x[1])).join("'s ")}.`}
+function path(a,b,sp){const prev={[a]:null},q=[a];
+ for(let i=0;i<q.length&&!(b in prev);i++){const u=q[i],nb=P[u].par.map(x=>[x,'p']);
+  Object.values(P).forEach(c=>{if(c.par.includes(u))nb.push([c.id,'c'])});if(sp)P[u].sp.forEach(x=>nb.push([x,'s']));
+  for(const[x,t]of nb)if(P[x]&&!(x in prev)){prev[x]={f:u,t,n:x};q.push(x)}}
+ if(!(b in prev))return null;const st=[];for(let x=b;x!=a;x=prev[x].f)st.unshift(prev[x]);return st}
+/* all shortest paths (capped), so we can choose the most meaningful relation when several have the same length */
+function paths(a,b,sp){const dist={[a]:0},pr={[a]:[]},q=[a];
+ for(let i=0;i<q.length;i++){const u=q[i];if(b in dist&&dist[u]>=dist[b])break;const nb=P[u].par.map(x=>[x,'p']);
+  Object.values(P).forEach(c=>{if(c.par.includes(u))nb.push([c.id,'c'])});if(sp)P[u].sp.forEach(x=>nb.push([x,'s']));
+  for(const[x,t]of nb)if(P[x]){if(!(x in dist)){dist[x]=dist[u]+1;pr[x]=[];q.push(x)}if(dist[x]==dist[u]+1)pr[x].push({f:u,t,n:x})}}
+ if(!(b in dist))return[];const out=[];
+ const rec=(x,acc)=>{if(out.length>80)return;if(x==a){out.push(acc);return}for(const e of pr[x])rec(e.f,[e,...acc])};rec(b,[]);return out}
+/* priority: sibling (and sibling-in-law) first, other exact kin terms next, Samdhi/Samdhan after those, vague paths last */
+const SIB={pc:1,pcs:1,spc:1};
+function bestPath(a,b){const s0=path(a,b,0),s1=path(a,b,1),old=s0&&(!s1||s1.length>=s0.length)?s0:s1;if(!old)return null;
+ const rank=st=>{const k=st.map(z=>z.t).join('');return SIB[k]?0:k=='csp'?2:KIN[k]?1:3},c=[...paths(a,b,0),...paths(a,b,1)].filter(x=>x.length==old.length),m=Math.min(rank(old),...c.map(rank));
+ return rank(old)==m?old:c.find(x=>rank(x)==m)}
+const ROLE={p:['father','mother','parent'],c:['son','daughter','child'],s:['husband','wife','spouse']},LINK={p:'Parent',c:'Child',s:'Spouse'};
+const role=(t,g)=>ROLE[t][g=='M'?0:g=='F'?1:2];
+/* shortest view: a parent->child hop is shown as one Brother/Sister step; detailed view keeps every generation */
+function viewSteps(st,det){if(det)return st.map(z=>({n:z.n,l:LINK[z.t]}));const o=[];
+ for(let i=0;i<st.length;i++){if(st[i].t=='p'&&st[i+1]&&st[i+1].t=='c'){o.push({n:st[i+1].n,l:gx(P[st[i+1].n].gender,'Brother','Sister','Sibling')});i++}else o.push({n:st[i].n,l:LINK[st[i].t]})}return o}
+let syA,syB,syF,relDet=false;
+function setupPick(w){const inp=$('#s'+w),sel=$('#r'+w),box=$('#l'+w),sync=()=>{const p=P[w=='f'?foc:sel.value];inp.value=p?lab(p):''};
+ const list=q=>{const ws=q.toLowerCase().split(/\s+/).filter(Boolean),L=Object.values(P).filter(p=>{const t=lab(p).toLowerCase();return ws.every(x=>t.includes(x))}).sort((x,y)=>nm(x).localeCompare(nm(y)));
+  box.innerHTML=L.slice(0,60).map(p=>`<div class="it" data-id="${esc(p.id)}">${esc(lab(p))}</div>`).join('')+(L.length>60?`<div class="it2 mut">${L.length-60} more — keep typing to narrow down…</div>`:'')||'<div class="it2 mut">No match</div>';
+  /* keep the list visible above the phone keyboard: open upward when the box sits in the lower part of the screen */
+  const rc=inp.getBoundingClientRect(),vh=Math.min(window.innerHeight||600,430),up=rc.bottom>vh*.5;box.style.top=up?'auto':'100%';box.style.bottom=up?'100%':'auto';box.style.maxHeight=Math.max(120,Math.min(260,up?rc.top-8:vh-rc.bottom-8))+'px';box.hidden=false};
+ inp.onfocus=()=>{inp.placeholder=inp.value||'Search by name or place…';inp.value='';list('')};
+ inp.oninput=()=>list(inp.value);
+ inp.onblur=()=>setTimeout(()=>{box.hidden=true;sync()},150);
+ box.onmousedown=e=>e.preventDefault();
+ box.onclick=e=>{const it=e.target.closest('.it');if(!it)return;if(w=='f')focusOn(it.dataset.id);else{sel.value=it.dataset.id;renderRel()}sync();box.hidden=true;inp.blur()};
+ return sync}
+function fillRel(a){const L=Object.values(P).sort((x,y)=>nm(x).localeCompare(nm(y))),o=L.map(p=>`<option value="${esc(p.id)}">${esc(lab(p))}</option>`).join(''),ea=$('#ra'),eb=$('#rb'),va=ea.value,vb=eb.value;
+ ea.innerHTML=eb.innerHTML=o;ea.value=a||(P[va]?va:L[0]?L[0].id:'');
+ eb.value=P[vb]&&vb!=ea.value?vb:((L.find(p=>p.id!=ea.value)||{}).id||'');syA();syB();renderRel()}
+function renderRel(){const A=$('#ra').value,B=$('#rb').value,o=$('#rres');lastRel=null;
+ if(!P[A]||!P[B]||A==B){o.innerHTML='<p class="mut">'+(P[A]&&A==B?'Pick two different people.':'Add at least two people to find a relationship.')+'</p>';return}
+ const st=bestPath(A,B),a=nm(P[A]),b=nm(P[B]);
+ if(!st){o.innerHTML=`<div class="card">No connection found between ${esc(a)} and ${esc(b)}. Link them through a common relative.</div>`;return}
+ const[cat,loc,sub]=relOf(st,P[B].gender,P[A].gender),n=st.length,gb=P[B].gender,
+ sent=chain(A,st,a,b),al=cat!='Samdhi / Samdhan'&&kidsOf(A).some(x=>P[x].sp.some(y=>P[y]&&P[y].par.includes(B)))?`Also ${gx(gb,'Samdhi','Samdhan','Samdhi/Samdhan')} (child's spouse's parent)`:'',
+ vs=viewSteps(st,relDet),m=vs.length,ch=[A,...vs.map(z=>z.n)].map((id,i)=>`<div class="st"><div class="pn${i==m?' hit':''}" data-go="${esc(id)}" style="cursor:pointer">${esc(nm(P[id]))}<br><small class="mut">${esc(P[id].place||{M:'Male',F:'Female'}[P[id].gender]||'')}</small></div>${i<m?`<span class="ar">${vs[i].l} →</span>`:''}</div>`).join('');
+ o.innerHTML=`<div class="card hl"><span class="badge">${esc(cat)}</span><div class="big">${esc(loc||cat)}</div><div class="mut">${esc(sub)}</div>${al?`<div class="mut">${esc(al)}</div>`:''}<p>${esc(sent)}</p><button class="pri" data-act="rtree">View connection in tree →</button></div><div class="card"><h2>Relationship Path Chain</h2><div class="acts" style="justify-content:space-between;align-items:center;margin:0 0 6px"><span class="mut">${relDet?'Detailed hierarchy ('+st.length+' steps)':'Shortest kinship path ('+m+' steps)'}</span><button data-act="rdet">${relDet?'Show shortest':'Show detailed'}</button></div>${ch}</div>`;lastRel={A,B,st,sent}}
+
+/* ---------- events ---------- */
+const svg=$('#svg');let drag=null,gest=null;const ptr={};
+const rel=e=>{const q=svg.getBoundingClientRect();return{x:e.clientX-q.left,y:e.clientY-q.top}},ctr=()=>{const q=svg.getBoundingClientRect();return[q.width/2,q.height/2]};
+const two=()=>{const k=Object.keys(ptr);if(k.length<2)return null;const a=ptr[k[0]],b=ptr[k[1]];return{d:Math.hypot(b.x-a.x,b.y-a.y)||1,a:Math.atan2(b.y-a.y,b.x-a.x),x:(a.x+b.x)/2,y:(a.y+b.y)/2}};
+/* one finger: pan / tap.  two fingers: pinch to zoom, twist to rotate (full tree) */
+svg.onpointerdown=e=>{if(mode=='full')wake();ptr[e.pointerId]=rel(e);try{svg.setPointerCapture(e.pointerId)}catch(x){}
+ if(Object.keys(ptr).length>1){gest=two();drag=null}else drag={x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY,vx:view.x,vy:view.y,m:0}};
+svg.onpointermove=e=>{if(!ptr[e.pointerId])return;ptr[e.pointerId]=rel(e);
+ if(gest){const g=two();if(!g)return;view.x+=g.x-gest.x;view.y+=g.y-gest.y;zoomAt(g.d/gest.d,g.x,g.y);
+  if(mode=='full'){let d=(g.a-gest.a)*180/Math.PI;d=((d+180)%360+360)%360-180;rotTo(rAcc+d,g.x,g.y)}gest=g;return}
+ if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>5)drag.m=1;if(drag.m){view.x=drag.vx+dx;view.y=drag.vy+dy;apply()}};
+const up=e=>{const tapOk=drag&&!drag.m&&Object.keys(ptr).length==1&&e.type=='pointerup';delete ptr[e.pointerId];if(Object.keys(ptr).length<2)gest=null;
+ if(tapOk){const n=document.elementFromPoint(e.clientX,e.clientY)?.closest('.n');tap(n?n.dataset.id:null)}if(!Object.keys(ptr).length)drag=null};
+svg.onpointerup=up;svg.onpointercancel=up;
+svg.onwheel=e=>{e.preventDefault();const p=rel(e);if(e.shiftKey&&mode=='full')rotTo(rAcc+(e.deltaY>0?NOTCH:-NOTCH),p.x,p.y);else zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)};
+$('#rot').oninput=e=>{wake();const c=ctr();rotTo(rCur-view.r+(+e.target.value),c[0],c[1])};
+$('#sheet').oninput=e=>{const f=e.target.dataset.f;if(f&&P[sel]){P[sel][f]=e.target.value;save();draw()}};
+$('#sheet').onchange=e=>{if(e.target.dataset.f=='gender')draw()};
+$('#q').oninput=renderList;$('#ra').onchange=$('#rb').onchange=renderRel;
+function decode(b){const u=new Uint8Array(b),e=u[0]==255&&u[1]==254?'utf-16le':u[0]==254&&u[1]==255?'utf-16be':'utf-8';return new TextDecoder(e).decode(u)}
+function doImport(t){try{t=t.replace(/^\ufeff/,'');if(!t.trim())return toast('Nothing to import');
+ const n=/first_name/i.test(t.split(/\r\n|\r|\n/)[0])?importCSV(t):importFTT(t);
+ if(!Object.keys(n).length)return toast('No people found — is this a CSV from this app or a .ftt file?');setData(n);show('tree')}catch(x){toast('Import failed: '+(x.message||x))}}
+$('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;toast('Reading '+f.name+'…');const rd=new FileReader();
+ rd.onload=()=>doImport(decode(rd.result));rd.onerror=()=>toast('Could not read that file');rd.readAsArrayBuffer(f);e.target.value=''};
+document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data-act],[data-go]');if(!t)return;
+ if(t.dataset.tab)return show(t.dataset.tab);
+ if(t.dataset.go){show('tree');if(mode!='full')focusOn(t.dataset.go);else{select(t.dataset.go);centerOn(t.dataset.go)}return}
+ const a=t.dataset.act,r=svg.getBoundingClientRect();
+ if(a=='new'){show('tree');const p=add({});save();foc=p.id;select(p.id);syF&&syF();centerOn(p.id);const f=$('#sheet [data-f=first]');f&&f.focus()}
+ else if(a=='par'||a=='chi'||a=='spo')addRel(a);
+ else if(a=='lnk')linkExisting();else if(a=='del')del();else if(a=='close')select(null);
+ else if(a=='zi')zoomAt(1.25,r.width/2,r.height/2);else if(a=='zo')zoomAt(.8,r.width/2,r.height/2);else if(a=='fit')fit();
+ else if(a=='dl')download();else if(a=='cp')copy();else if(a=='ip')doImport($('#paste').value);else if(a=='rdet'){relDet=!relDet;renderRel()}else if(a=='net')focusOn(sel);else if(a=='rtree'&&lastRel){rp=lastRel;mode='path';sel=null;$('#sheet').hidden=true;show('tree');draw();fit()}else if(a=='pclose')focusOn(rp.A);else if(a=='rl'||a=='rr'||a=='r0'){const c=ctr();rotTo(a=='rl'?rAcc-15:a=='rr'?rAcc+15:rCur-view.r,c[0],c[1])}else if(a=='snd'){snd=!snd;$('#sndb').textContent=snd?'🔊':'🔇'}else if(a=='mode'){mode=mode=='focus'?'full':'focus';if(mode=='focus'&&sel&&P[sel])foc=sel;draw();fit();syF&&syF()}
+ else if(a=='rel'){const id=sel;show('rel');fillRel(id)}
+ else if(a=='swap'){const v=$('#ra').value;$('#ra').value=$('#rb').value;$('#rb').value=v;syA();syB();renderRel()}
+ else if(a=='undo'){try{const b=JSON.parse(localStorage.getItem(KEY+'-bak'));if(b)setData(b);else toast('No backup yet')}catch(x){toast('No backup yet')}}});
+try{P=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){P={}}
+foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();
+</script></body></html>
