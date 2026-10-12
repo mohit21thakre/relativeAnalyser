@@ -70,9 +70,10 @@ h2{font:600 17px system-ui,sans-serif;margin:0 0 6px}
 .rb input{flex:1;padding:0;border:0;background:none;accent-color:var(--acc)}.rb button{padding:6px 12px}
 #sheet{z-index:10}
 .l0 .n text{display:none}.l0 .n circle{r:28px}.l1 .n text.d{display:none}
+body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi],body.ro [data-act=del],body.ro [data-act=new],body.ro [data-act=undo],body.ro [data-act=ip]{display:none!important}
 </style></head>
 <body>
-<header><h1>Relative Analyser</h1><button class="pri" data-act="new">+ Person</button></header>
+<header><div><h1>Relative Analyser</h1><div id="hs" class="mut" style="font-size:11px"></div></div><button class="pri" data-act="new">+ Person</button></header>
 <nav><button data-tab="tree" class="on">Tree</button><button data-tab="people">People</button><button data-tab="rel">Relation</button><button data-tab="data">Data</button></nav>
 <main>
 <section id="tree"><svg id="svg"><g id="vp"></g></svg>
@@ -90,9 +91,9 @@ h2{font:600 17px system-ui,sans-serif;margin:0 0 6px}
 <div id="rres"></div></section>
 <section id="data" hidden>
 <p id="stat" style="margin:4px 0 10px"></p>
-<div class="acts"><button class="pri" data-act="dl">Download CSV</button><button data-act="cp">Copy CSV</button><label class="btn">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
+<div class="acts"><button class="pri" data-act="sync">⟳ Sync from database</button><button data-act="dl">Download CSV</button><button data-act="cp">Copy CSV</button><label class="btn eo">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
 <textarea id="csv" readonly></textarea>
-<div class="lbl" style="margin-top:14px">Can't pick a file? Paste CSV or .ftt text here:</div><textarea id="paste" style="height:90px" placeholder="Paste here, then tap Import pasted text"></textarea>
+<div class="lbl eo" style="margin-top:14px">Can't pick a file? Paste CSV or .ftt text here:</div><textarea id="paste" class="eo" style="height:90px" placeholder="Paste here, then tap Import pasted text"></textarea>
 <div class="acts"><button data-act="ip">Import pasted text</button></div>
 <p class="mut" style="font-size:13px">One row per person. <b>parent_ids</b> and <b>spouse_ids</b> hold ids of other rows, separated by “;”. That flat format imports easily into spreadsheets, databases or other family-tree apps. Importing replaces current data (a backup is kept). Data is also kept in this browser, so export regularly.</p>
 </section>
@@ -232,8 +233,8 @@ function openSheet(){const p=P[sel],sh=$('#sheet'),kids=Object.values(P).filter(
  <div class="row"><input data-f="place" placeholder="Place" value="${esc(p.place)}"><input data-f="notes" placeholder="Notes" value="${esc(p.notes)}"></div>
  <div class="lbl">Parents</div>${chips(p.par)}<div class="lbl">Spouse(s)</div>${chips(p.sp)}<div class="lbl">Children</div>${chips(kids)}
  <div class="acts"><button data-act="par">+ Parent</button><button data-act="spo">+ Spouse</button><button data-act="chi">+ Child</button><button data-act="rel">Find relation</button><button data-act="net">View network</button></div>
- <div class="lbl">Link an existing person as…</div><div class="row"><select id="lk"><option value="par">Parent</option><option value="spo">Spouse</option><option value="chi">Child</option></select><select id="lt">${opts}</select><button data-act="lnk" style="flex:0 0 auto">Link</button></div>
- <div class="acts" style="justify-content:space-between"><button class="del" data-act="del">Delete</button><button data-act="close">Close</button></div>`;sh.hidden=false}
+ <div class="lbl eo">Link an existing person as…</div><div class="row eo"><select id="lk"><option value="par">Parent</option><option value="spo">Spouse</option><option value="chi">Child</option></select><select id="lt">${opts}</select><button data-act="lnk" style="flex:0 0 auto">Link</button></div>
+ <div class="acts" style="justify-content:space-between"><button class="del" data-act="del">Delete</button><button data-act="close">Close</button></div>`;if(RO)sh.querySelectorAll('[data-f]').forEach(e=>e.disabled=true);sh.hidden=false}
 function addRel(k){const c=P[sel];if(!c)return;let n;
  if(k=='par'){if(c.par.length>=2)return toast('Already has two parents');n=add({});c.par.push(n.id);if(c.par.length==2)link(n,P[c.par[0]])}
  else if(k=='chi')n=add({par:[c.id,...(c.sp.length==1?c.sp:[])]});
@@ -268,6 +269,25 @@ function importFTT(t){const L=t.split(/\r\n|\r|\n/).filter(x=>x.trim()).slice(1)
  return clean(n)}
 function setData(n){try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch(e){}P=n;sel=null;foc=Object.keys(P)[0]||null;mode='focus';save();$('#sheet').hidden=true;draw();needFit=1;renderData();toast('Loaded '+Object.keys(P).length+' people')}
 
+/* ---------- central database (Supabase) : read-only sync for now ---------- */
+const SB='https://llunlcxpyqpbylsafrqp.supabase.co',SK='sb_publishable__E0tdZNkY-wkoTzcaB6ZQg_bcpg5hXm';/* publishable key: safe to be public, row rules in the database protect the data */
+async function sbGet(q){const out=[];for(let off=0;;off+=1000){const r=await fetch(`${SB}/rest/v1/${q}&limit=1000&offset=${off}`,{headers:{apikey:SK}});
+ if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,100));const a=await r.json();out.push(...a);if(a.length<1000)break}return out}
+function fromRemote(ps,pl,sl){const n={};ps.forEach(r=>n[r.id]={id:r.id,first:r.first_name||'',last:r.last_name||'',gender:r.gender||'',birth:r.birth_date||'',death:r.death_date||'',place:r.place||'',notes:'',par:[],sp:[]});
+ pl.forEach(r=>{if(n[r.child_id]&&n[r.parent_id])n[r.child_id].par.push(r.parent_id)});sl.forEach(r=>{const a=n[r.a_id],b=n[r.b_id];if(a&&b)link(a,b)});return clean(n)}
+const setSt=t=>{const h=$('#hs');if(h)h.textContent=t};
+let syncing=false,RO=false;
+function setRO(v){RO=v;document.body.classList.toggle('ro',v);try{localStorage.setItem(KEY+'-ro',v?'1':'')}catch(e){}}
+async function syncDown(manual){if(syncing)return;syncing=true;setSt('Syncing…');
+ try{const[ps,pl,sl]=await Promise.all([sbGet('persons?select=id,first_name,last_name,gender,birth_date,death_date,place&status=eq.approved&order=id'),
+   sbGet('parent_links?select=child_id,parent_id&status=eq.approved&order=child_id,parent_id'),sbGet('spouse_links?select=a_id,b_id&status=eq.approved&order=a_id,b_id')]);
+  if(!ps.length)throw new Error('no people returned - check access rules');
+  try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch(e){}
+  P=fromRemote(ps,pl,sl);setRO(true);sel=null;foc=Object.keys(P)[0]||null;save();$('#sheet').hidden=true;draw();needFit=1;if(!$('#tree').hidden){fit();needFit=0}renderData();
+  const t=new Date().toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});try{localStorage.setItem('ra-last-sync',t)}catch(e){}
+  setSt('Synced '+t+' · '+Object.keys(P).length+' people');if(manual)toast('Loaded '+Object.keys(P).length+' people from the database')}
+ catch(e){let t='';try{t=localStorage.getItem('ra-last-sync')||''}catch(x){}setSt(t?'Offline · saved copy from '+t:'Offline · saved data');if(manual)toast('Could not sync: '+e.message)}
+ finally{syncing=false}}
 /* ---------- views ---------- */
 function show(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==t));
  ['tree','people','rel','data'].forEach(s=>$('#'+s).hidden=s!=t);if(t!='tree')$('#sheet').hidden=true;
@@ -407,14 +427,15 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data
  if(t.dataset.tab)return show(t.dataset.tab);
  if(t.dataset.go){show('tree');if(mode!='full')focusOn(t.dataset.go);else{select(t.dataset.go);centerOn(t.dataset.go)}return}
  const a=t.dataset.act,r=svg.getBoundingClientRect();
+ if(RO&&['new','par','chi','spo','lnk','del','ip','undo'].includes(a))return toast('Read-only for now — editing arrives with login');
  if(a=='new'){show('tree');const p=add({});save();foc=p.id;select(p.id);syF&&syF();centerOn(p.id);const f=$('#sheet [data-f=first]');f&&f.focus()}
  else if(a=='par'||a=='chi'||a=='spo')addRel(a);
  else if(a=='lnk')linkExisting();else if(a=='del')del();else if(a=='close')select(null);
  else if(a=='zi')zoomAt(1.25,r.width/2,r.height/2);else if(a=='zo')zoomAt(.8,r.width/2,r.height/2);else if(a=='fit')fit();
- else if(a=='dl')download();else if(a=='cp')copy();else if(a=='ip')doImport($('#paste').value);else if(a=='rdet'){relDet=!relDet;renderRel()}else if(a=='net')focusOn(sel);else if(a=='rtree'&&lastRel){rp=lastRel;mode='path';sel=null;$('#sheet').hidden=true;show('tree');draw();fit()}else if(a=='pclose')focusOn(rp.A);else if(a=='rl'||a=='rr'||a=='r0'){const c=ctr();rotTo(a=='rl'?rAcc-15:a=='rr'?rAcc+15:rCur-view.r,c[0],c[1])}else if(a=='snd'){snd=!snd;$('#sndb').textContent=snd?'🔊':'🔇'}else if(a=='mode'){mode=mode=='focus'?'full':'focus';if(mode=='focus'&&sel&&P[sel])foc=sel;draw();fit();syF&&syF()}
+ else if(a=='dl')download();else if(a=='cp')copy();else if(a=='ip')doImport($('#paste').value);else if(a=='rdet'){relDet=!relDet;renderRel()}else if(a=='net')focusOn(sel);else if(a=='rtree'&&lastRel){rp=lastRel;mode='path';sel=null;$('#sheet').hidden=true;show('tree');draw();fit()}else if(a=='pclose')focusOn(rp.A);else if(a=='rl'||a=='rr'||a=='r0'){const c=ctr();rotTo(a=='rl'?rAcc-15:a=='rr'?rAcc+15:rCur-view.r,c[0],c[1])}else if(a=='snd'){snd=!snd;$('#sndb').textContent=snd?'🔊':'🔇'}else if(a=='sync')syncDown(true);else if(a=='mode'){mode=mode=='focus'?'full':'focus';if(mode=='focus'&&sel&&P[sel])foc=sel;draw();fit();syF&&syF()}
  else if(a=='rel'){const id=sel;show('rel');fillRel(id)}
  else if(a=='swap'){const v=$('#ra').value;$('#ra').value=$('#rb').value;$('#rb').value=v;syA();syB();renderRel()}
  else if(a=='undo'){try{const b=JSON.parse(localStorage.getItem(KEY+'-bak'));if(b)setData(b);else toast('No backup yet')}catch(x){toast('No backup yet')}}});
 try{P=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){P={}}
-foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();
+foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);
 </script></body></html>
