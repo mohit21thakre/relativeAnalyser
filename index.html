@@ -73,7 +73,7 @@ h2{font:600 17px system-ui,sans-serif;margin:0 0 6px}
 body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi],body.ro [data-act=del],body.ro [data-act=new],body.ro [data-act=undo],body.ro [data-act=ip]{display:none!important}
 </style></head>
 <body>
-<header><div><h1>Relative Analyser</h1><div id="hs" class="mut" style="font-size:11px"></div></div><button class="pri" data-act="new">+ Person</button></header>
+<header><div><h1>Relative Analyser</h1><div id="hs" class="mut" style="font-size:11px"></div></div><div style="display:flex;gap:6px"><button id="lgb" data-act="login">Sign in</button><button class="pri" data-act="new">+ Person</button></div></header>
 <nav><button data-tab="tree" class="on">Tree</button><button data-tab="people">People</button><button data-tab="rel">Relation</button><button data-tab="data">Data</button></nav>
 <main>
 <section id="tree"><svg id="svg"><g id="vp"></g></svg>
@@ -90,6 +90,7 @@ body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi]
 <div class="acts"><button data-act="swap">⇄ Swap A and B</button></div></div>
 <div id="rres"></div></section>
 <section id="data" hidden>
+<div id="acct" class="card" style="margin:0 0 10px"></div>
 <p id="stat" style="margin:4px 0 10px"></p>
 <div class="acts"><button class="pri" data-act="sync">⟳ Sync from database</button><button data-act="dl">Download CSV</button><button data-act="cp">Copy CSV</button><label class="btn eo">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
 <textarea id="csv" readonly></textarea>
@@ -99,6 +100,13 @@ body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi]
 </section>
 </main>
 <div id="sheet" hidden></div>
+<div id="login" hidden style="position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px">
+<div class="card" style="width:100%;max-width:380px;margin:0"><h2 id="lt2">Sign in</h2>
+<div id="lname" hidden><div class="lbl">YOUR NAME</div><input id="lnm" placeholder="Full name" autocomplete="name"></div>
+<div class="lbl">EMAIL</div><input id="lem" type="email" autocomplete="email" placeholder="you@example.com">
+<div class="lbl">PASSWORD</div><input id="lpw" type="password" autocomplete="current-password" placeholder="At least 8 characters">
+<div id="lmsg" class="mut" style="min-height:20px;margin:8px 0;font-size:13px"></div>
+<div class="acts"><button class="pri" data-act="lgo" id="lgo">Sign in</button><button data-act="lmode" id="lmode">New here? Create account</button><button data-act="lclose">Cancel</button></div></div></div>
 <div id="toast" hidden></div>
 <script>
 const $=s=>document.querySelector(s),KEY='relative-analyser-v1',W=124,NH=46,H=130,GS=14,GU=34;
@@ -271,7 +279,7 @@ function setData(n){try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch
 
 /* ---------- central database (Supabase) : read-only sync for now ---------- */
 const SB='https://llunlcxpyqpbylsafrqp.supabase.co',SK='sb_publishable__E0tdZNkY-wkoTzcaB6ZQg_bcpg5hXm';/* publishable key: safe to be public, row rules in the database protect the data */
-async function sbGet(q){const out=[];for(let off=0;;off+=1000){const r=await fetch(`${SB}/rest/v1/${q}&limit=1000&offset=${off}`,{headers:{apikey:SK}});
+async function sbGet(q){const out=[];for(let off=0;;off+=1000){const r=await fetch(`${SB}/rest/v1/${q}&limit=1000&offset=${off}`,{headers:await authHeaders()});
  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,100));const a=await r.json();out.push(...a);if(a.length<1000)break}return out}
 function fromRemote(ps,pl,sl){const n={};ps.forEach(r=>n[r.id]={id:r.id,first:r.first_name||'',last:r.last_name||'',gender:r.gender||'',birth:r.birth_date||'',death:r.death_date||'',place:r.place||'',notes:'',par:[],sp:[]});
  pl.forEach(r=>{if(n[r.child_id]&&n[r.parent_id])n[r.child_id].par.push(r.parent_id)});sl.forEach(r=>{const a=n[r.a_id],b=n[r.b_id];if(a&&b)link(a,b)});return clean(n)}
@@ -288,13 +296,35 @@ async function syncDown(manual){if(syncing)return;syncing=true;setSt('Syncing…
   setSt('Synced '+t+' · '+Object.keys(P).length+' people');if(manual)toast('Loaded '+Object.keys(P).length+' people from the database')}
  catch(e){let t='';try{t=localStorage.getItem('ra-last-sync')||''}catch(x){}setSt(t?'Offline · saved copy from '+t:'Offline · saved data');if(manual)toast('Could not sync: '+e.message)}
  finally{syncing=false}}
+/* ---------- login (Supabase Auth: email + password) ---------- */
+let SES=null,ME=null,lmode='in';
+try{SES=JSON.parse(localStorage.getItem('ra-session')||'null')}catch(e){SES=null}
+function saveSes(s){SES=s;try{s?localStorage.setItem('ra-session',JSON.stringify(s)):localStorage.removeItem('ra-session')}catch(e){}}
+async function authCall(path,body,token){const r=await fetch(`${SB}/auth/v1/${path}`,{method:'POST',headers:{apikey:SK,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body||{})});
+ let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.msg||j.error_description||j.message||('Error '+r.status));return j}
+const toSes=j=>j&&j.access_token?{access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Math.floor(Date.now()/1000)+(j.expires_in||3600),email:(j.user||{}).email||'',uid:(j.user||{}).id||''}:null;
+async function authHeaders(){const h={apikey:SK};
+ if(SES&&SES.expires_at-60<Date.now()/1000){try{const n=toSes(await authCall('token?grant_type=refresh_token',{refresh_token:SES.refresh_token}));if(n){n.email=n.email||SES.email;n.uid=n.uid||SES.uid;saveSes(n)}}catch(e){if(!/fetch|network/i.test(e.message))saveSes(null)}}
+ if(SES)h.Authorization='Bearer '+SES.access_token;return h}
+async function loadMe(){ME=null;if(!SES)return;try{const r=await fetch(`${SB}/rest/v1/profiles?select=role,trust_id,full_name&id=eq.${SES.uid}`,{headers:await authHeaders()});if(r.ok){const a=await r.json();ME=a[0]||{role:'viewer',trust_id:null}}}catch(e){}}
+function renderAcct(){const b=$('#lgb'),a=$('#acct');if(b)b.textContent=SES?'Account':'Sign in';if(!a)return;
+ a.innerHTML=SES?`<div><b>${esc(SES.email)}</b></div><div class="mut" style="margin:2px 0 8px">Role: ${esc(ME?ME.role:'checking…')}${ME&&!ME.trust_id?' · not linked to a trust yet (needs an invite)':''}</div><button data-act="lout">Sign out</button>`
+ :`<div class="mut" style="margin-bottom:8px">Viewing as a guest (read-only). Sign in to contribute.</div><button class="pri" data-act="login">Sign in / Create account</button>`}
+function setLM(){const up=lmode=='up';$('#lt2').textContent=up?'Create account':'Sign in';$('#lname').hidden=!up;$('#lgo').textContent=up?'Create account':'Sign in';$('#lmode').textContent=up?'I already have an account':'New here? Create account';$('#lpw').autocomplete=up?'new-password':'current-password';$('#lmsg').textContent=''}
+async function doLogin(){const em=$('#lem').value.trim(),pw=$('#lpw').value,msg=m=>$('#lmsg').textContent=m;
+ if(!em||pw.length<8)return msg('Enter your email and a password of at least 8 characters.');msg('Please wait…');$('#lgo').disabled=true;
+ try{const up=lmode=='up',j=up?await authCall('signup',{email:em,password:pw,data:{full_name:$('#lnm').value.trim()}}):await authCall('token?grant_type=password',{email:em,password:pw}),s=toSes(j);
+  if(!s){msg('Account created, but email confirmation is still switched on in the database settings. Ask the admin to turn it off, then sign in.');return}
+  saveSes(s);$('#login').hidden=true;$('#lpw').value='';ME=null;renderAcct();await loadMe();renderAcct();toast('Signed in as '+s.email);syncDown(false)}
+ catch(e){msg(/Failed to fetch|NetworkError/i.test(e.message)?'No internet connection.':e.message)}finally{$('#lgo').disabled=false}}
+async function doLogout(){try{await authCall('logout',{},SES&&SES.access_token)}catch(e){}saveSes(null);ME=null;renderAcct();toast('Signed out');syncDown(false)}
 /* ---------- views ---------- */
 function show(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==t));
  ['tree','people','rel','data'].forEach(s=>$('#'+s).hidden=s!=t);if(t!='tree')$('#sheet').hidden=true;
  if(t=='tree'&&needFit){fit();needFit=0}if(t=='people')renderList();if(t=='rel')fillRel();if(t=='data')renderData()}
 function renderList(){const q=$('#q').value.toLowerCase(),a=Object.values(P).filter(p=>nm(p).toLowerCase().includes(q)).sort((x,y)=>nm(x).localeCompare(nm(y)));
  $('#list').innerHTML=a.map(p=>`<div class="person" data-go="${esc(p.id)}"><span>${esc(nm(p))}<br><small>${esc(dates(p))}</small></span><small>${p.par.length?'↑'+p.par.length+' ':''}${p.sp.length?'♥'+p.sp.length:''}</small></div>`).join('')||'<p class="mut">Nobody yet.</p>'}
-function renderData(){const a=Object.values(P);$('#stat').textContent=a.length+' people · '+a.reduce((s,p)=>s+p.sp.length,0)/2+' couples · '+a.reduce((s,p)=>s+p.par.length,0)+' parent links';$('#csv').value=toCSV()}
+function renderData(){renderAcct();const a=Object.values(P);$('#stat').textContent=a.length+' people · '+a.reduce((s,p)=>s+p.sp.length,0)/2+' couples · '+a.reduce((s,p)=>s+p.par.length,0)+' parent links';$('#csv').value=toCSV()}
 async function download(){const d=window.claude?await claude.use('downloads'):null;
  if(!d){try{const b=new Blob(['\ufeff'+toCSV()],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='relatives.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}catch(e){toast('Download unavailable here — copy the text instead')}return}
  try{await d.save({filename:'relatives.csv',data:'\ufeff'+toCSV()})}catch(e){if(e.code!='declined')toast('Not saved ('+(e.code||'error')+') — copy the text instead')}}
@@ -427,6 +457,8 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data
  if(t.dataset.tab)return show(t.dataset.tab);
  if(t.dataset.go){show('tree');if(mode!='full')focusOn(t.dataset.go);else{select(t.dataset.go);centerOn(t.dataset.go)}return}
  const a=t.dataset.act,r=svg.getBoundingClientRect();
+ if(a=='login'){if(SES)show('data');else{lmode='in';setLM();$('#login').hidden=false}return}
+ if(a=='lgo'){doLogin();return}if(a=='lmode'){lmode=lmode=='in'?'up':'in';setLM();return}if(a=='lclose'){$('#login').hidden=true;return}if(a=='lout'){doLogout();return}
  if(RO&&['new','par','chi','spo','lnk','del','ip','undo'].includes(a))return toast('Read-only for now — editing arrives with login');
  if(a=='new'){show('tree');const p=add({});save();foc=p.id;select(p.id);syF&&syF();centerOn(p.id);const f=$('#sheet [data-f=first]');f&&f.focus()}
  else if(a=='par'||a=='chi'||a=='spo')addRel(a);
@@ -437,5 +469,5 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data
  else if(a=='swap'){const v=$('#ra').value;$('#ra').value=$('#rb').value;$('#rb').value=v;syA();syB();renderRel()}
  else if(a=='undo'){try{const b=JSON.parse(localStorage.getItem(KEY+'-bak'));if(b)setData(b);else toast('No backup yet')}catch(x){toast('No backup yet')}}});
 try{P=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){P={}}
-foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);
+foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);loadMe().then(renderAcct);$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
 </script></body></html>
