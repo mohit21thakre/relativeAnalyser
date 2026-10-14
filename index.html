@@ -71,6 +71,8 @@ h2{font:600 17px system-ui,sans-serif;margin:0 0 6px}
 #sheet{z-index:10}
 .l0 .n text{display:none}.l0 .n circle{r:28px}.l1 .n text.d{display:none}
 body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi],body.ro [data-act=del],body.ro [data-act=new],body.ro [data-act=undo],body.ro [data-act=ip]{display:none!important}
+.rc,.ra,.rs{display:none}body.r-c .rc,body.r-a .ra,body.in .rs{display:inline-block}button:disabled{opacity:.55}
+#chkout{white-space:pre-line;font-size:13px;margin-top:8px}
 </style></head>
 <body>
 <header><div><h1>Relative Analyser</h1><div id="hs" class="mut" style="font-size:11px"></div></div><div style="display:flex;gap:6px"><button id="lgb" data-act="login">Sign in</button><button class="pri" data-act="new">+ Person</button></div></header>
@@ -91,6 +93,8 @@ body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi]
 <div id="rres"></div></section>
 <section id="data" hidden>
 <div id="acct" class="card" style="margin:0 0 10px"></div>
+<div id="tools" class="card" style="margin:0 0 10px"><b>Your tools</b><div id="toolsmsg" class="mut" style="margin:4px 0 8px"></div>
+<div class="acts"><button class="rc" disabled>Add my branch · task 4.2</button><button class="ra" disabled>Invite people · task 3.3</button><button class="ra" disabled>Review queue · task 5.1</button><button class="ra" disabled>Users &amp; roles · task 5.3</button><button class="rs" data-act="chk">Check my access</button></div><div id="chkout"></div></div>
 <p id="stat" style="margin:4px 0 10px"></p>
 <div class="acts"><button class="pri" data-act="sync">⟳ Sync from database</button><button data-act="dl">Download CSV</button><button data-act="cp">Copy CSV</button><label class="btn eo">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
 <textarea id="csv" readonly></textarea>
@@ -307,7 +311,18 @@ async function authHeaders(){const h={apikey:SK};
  if(SES&&SES.expires_at-60<Date.now()/1000){try{const n=toSes(await authCall('token?grant_type=refresh_token',{refresh_token:SES.refresh_token}));if(n){n.email=n.email||SES.email;n.uid=n.uid||SES.uid;saveSes(n)}}catch(e){if(!/fetch|network/i.test(e.message))saveSes(null)}}
  if(SES)h.Authorization='Bearer '+SES.access_token;return h}
 async function loadMe(){ME=null;if(!SES)return;try{const r=await fetch(`${SB}/rest/v1/profiles?select=role,trust_id,full_name&id=eq.${SES.uid}`,{headers:await authHeaders()});if(r.ok){const a=await r.json();ME=a[0]||{role:'viewer',trust_id:null}}}catch(e){}}
-function renderAcct(){const b=$('#lgb'),a=$('#acct');if(b)b.textContent=SES?'Account':'Sign in';if(!a)return;
+const myRole=()=>SES&&ME&&ME.trust_id?ME.role:(SES?'viewer':'guest');
+function applyRole(){const r=myRole(),c=r=='contributor'||r=='admin'||r=='developer',a=r=='admin'||r=='developer',B=document.body.classList;B.toggle('in',!!SES);B.toggle('r-c',c);B.toggle('r-a',a);
+ const m=$('#toolsmsg');if(m)m.textContent={guest:'Guest: you can browse the tree and the relation finder. Sign in to take part.',viewer:'Viewer: you can browse the tree and the relation finder. Editing needs an invite from an admin.',contributor:'Contributor: you will add your own branch here (coming in task 4.2).',admin:'Admin: invites, review and user management are coming in the next tasks.',developer:'Developer: same tools as an admin.'}[r]||''}
+async function selfTest(){const o=$('#chkout');if(!SES){o.textContent='Sign in first.';return}o.textContent='Checking…';const L=[],H=await authHeaders(),J={...H,'Content-Type':'application/json',Prefer:'return=representation'},r=myRole(),adm=r=='admin'||r=='developer',ok=(t,p)=>L.push((p?'✅ ':'⚠️ ')+t);
+ try{let x=await fetch(`${SB}/rest/v1/persons?select=id&status=eq.approved&limit=1`,{headers:H});ok('Can read the approved tree',x.ok);
+  x=await fetch(`${SB}/rest/v1/persons`,{method:'POST',headers:J,body:JSON.stringify({trust_id:ME&&ME.trust_id||undefined,first_name:'__access_test__',status:'draft'})});const can=x.ok;let id=null;if(can){try{id=(await x.json())[0].id}catch(e){}}
+  const wantAdd=r=='contributor'||adm;ok(wantAdd?'Can add a draft person (allowed for '+r+')':'Cannot add people (correct for '+r+')',wantAdd?can:!can);
+  if(id){const d=await fetch(`${SB}/rest/v1/persons?id=eq.${id}`,{method:'DELETE',headers:H});ok('Can remove its own test draft',d.ok)}
+  x=await fetch(`${SB}/rest/v1/change_log?select=id&limit=1`,{headers:H});const rows=x.ok?await x.json():[];ok(adm?'Can read the change log (admin)':'Cannot read the change log (correct for '+r+')',adm?rows.length>0:rows.length==0);
+  L.push('Role: '+r)}catch(e){L.push('⚠️ '+(/Failed to fetch/.test(e.message)?'No internet connection.':e.message))}
+ o.textContent=L.join('\n')}
+function renderAcct(){applyRole();const b=$('#lgb'),a=$('#acct');if(b)b.textContent=SES?'Account':'Sign in';if(!a)return;
  a.innerHTML=SES?`<div><b>${esc(SES.email)}</b></div><div class="mut" style="margin:2px 0 8px">Role: ${esc(ME?ME.role:'checking…')}${ME&&!ME.trust_id?' · not linked to a trust yet (needs an invite)':''}</div><button data-act="lout">Sign out</button>`
  :`<div class="mut" style="margin-bottom:8px">Viewing as a guest (read-only). Sign in to contribute.</div><button class="pri" data-act="login">Sign in / Create account</button>`}
 function setLM(){const up=lmode=='up';$('#lt2').textContent=up?'Create account':'Sign in';$('#lname').hidden=!up;$('#lgo').textContent=up?'Create account':'Sign in';$('#lmode').textContent=up?'I already have an account':'New here? Create account';$('#lpw').autocomplete=up?'new-password':'current-password';$('#lmsg').textContent=''}
@@ -457,9 +472,10 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data
  if(t.dataset.tab)return show(t.dataset.tab);
  if(t.dataset.go){show('tree');if(mode!='full')focusOn(t.dataset.go);else{select(t.dataset.go);centerOn(t.dataset.go)}return}
  const a=t.dataset.act,r=svg.getBoundingClientRect();
+ if(a=='chk'){selfTest();return}
  if(a=='login'){if(SES)show('data');else{lmode='in';setLM();$('#login').hidden=false}return}
  if(a=='lgo'){doLogin();return}if(a=='lmode'){lmode=lmode=='in'?'up':'in';setLM();return}if(a=='lclose'){$('#login').hidden=true;return}if(a=='lout'){doLogout();return}
- if(RO&&['new','par','chi','spo','lnk','del','ip','undo'].includes(a))return toast('Read-only for now — editing arrives with login');
+ if(RO&&['new','par','chi','spo','lnk','del','ip','undo'].includes(a))return toast(myRole()=='contributor'||myRole()=='admin'||myRole()=='developer'?'Adding people arrives in the next tasks (4.2 / 5.1)':'Read-only: only invited contributors can add people');
  if(a=='new'){show('tree');const p=add({});save();foc=p.id;select(p.id);syF&&syF();centerOn(p.id);const f=$('#sheet [data-f=first]');f&&f.focus()}
  else if(a=='par'||a=='chi'||a=='spo')addRel(a);
  else if(a=='lnk')linkExisting();else if(a=='del')del();else if(a=='close')select(null);
