@@ -74,10 +74,11 @@ body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi]
 .rc,.ra,.rs{display:none}body.r-c .rc,body.r-a .ra,body.in .rs{display:inline-block}button:disabled{opacity:.55}
 #chkout{white-space:pre-line;font-size:13px;margin-top:8px}
 .eo,[data-act=ip],[data-act=undo]{display:none!important}body.ro .ro1{display:none!important}
+body.dirty #sheet{padding-bottom:90px}body.dirty .rb{bottom:74px}.ad{display:none}body.r-a .ad{display:block}
 </style></head>
 <body>
 <header><div><h1>Relative Analyser</h1><div id="hs" class="mut" style="font-size:11px"></div></div><div style="display:flex;gap:6px"><button id="lgb" data-act="login">Sign in</button><button class="pri" data-act="new">+ Person</button></div></header>
-<nav><button data-tab="tree" class="on">Tree</button><button data-tab="people">People</button><button data-tab="rel">Relation</button><button data-tab="data">Data</button></nav>
+<nav><button data-tab="tree" class="on">Tree</button><button data-tab="people">People</button><button data-tab="rel">Relation</button><button data-tab="data" id="tabData">Data</button></nav>
 <main>
 <section id="tree"><svg id="svg"><g id="vp"></g></svg>
 <div id="empty" hidden><div style="font-size:42px">🌳</div><div>No relatives yet.<br>Add the first person, or import a file in the Data tab.</div><button class="pri" data-act="new">Add first person</button></div>
@@ -95,23 +96,27 @@ body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi]
 <section id="data" hidden>
 <div id="acct" class="card" style="margin:0 0 10px"></div>
 <div id="tools" class="card" style="margin:0 0 10px"><b>Your tools</b><div id="toolsmsg" class="mut" style="margin:4px 0 8px"></div>
-<div class="acts"><button class="rc" disabled>Add my branch · task 4.2</button><button class="ra" disabled>Invite people · task 3.3</button><button class="ra" disabled>Review queue · task 5.1</button><button class="ra" disabled>Users &amp; roles · task 5.3</button><button class="rs" data-act="chk">Check my access</button></div><div id="chkout"></div></div>
+<div class="acts"><button class="rc" disabled>Add my branch · task 4.2</button><button class="ra" data-act="inv">Invite people</button><button class="ra" disabled>Review queue · task 5.1</button><button class="ra" disabled>Users &amp; roles · task 5.3</button><button class="rs" data-act="chk">Check my access</button></div><div id="chkout"></div></div>
+<div id="invbox" class="card ad" hidden style="margin:0 0 10px"><b>Invite people</b>
+<div class="row" style="margin-top:8px"><select id="ivr"><option value="contributor">Contributor</option><option value="viewer">Viewer</option><option value="admin">Admin (full access)</option></select><select id="ivd"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select><select id="ivu"><option value="1">1 person</option><option value="5">5 people</option><option value="20">20 people</option></select></div>
+<div class="acts"><button class="pri" data-act="mkinv">Create invite link</button></div><div id="ivout"></div><div class="lbl">RECENT INVITES</div><div id="ivlist" class="mut">…</div></div>
 <p id="stat" style="margin:4px 0 10px"></p>
-<div class="acts"><button class="pri" data-act="sync">⟳ Sync from database</button><button data-act="dl">Download CSV</button><button data-act="cp">Copy CSV</button><label class="btn eo">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
-<textarea id="csv" readonly></textarea>
+<div class="acts"><button class="pri" data-act="sync">⟳ Sync from database</button><button class="ra" data-act="dl">Download CSV</button><button class="ra" data-act="cp">Copy CSV</button><label class="btn eo">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
+<textarea id="csv" class="ad" readonly></textarea>
 <div class="lbl eo" style="margin-top:14px">Can't pick a file? Paste CSV or .ftt text here:</div><textarea id="paste" class="eo" style="height:90px" placeholder="Paste here, then tap Import pasted text"></textarea>
 <div class="acts"><button data-act="ip">Import pasted text</button></div>
-<p class="mut" style="font-size:13px">One row per person. <b>parent_ids</b> and <b>spouse_ids</b> hold ids of other rows, separated by “;”. That flat format imports easily into spreadsheets, databases or other family-tree apps. Importing replaces current data (a backup is kept). Data is also kept in this browser, so export regularly.</p>
+<p class="mut ad" style="font-size:13px">One row per person. <b>parent_ids</b> and <b>spouse_ids</b> hold ids of other rows, separated by “;”. That flat format imports easily into spreadsheets, databases or other family-tree apps. Importing replaces current data (a backup is kept). Data is also kept in this browser, so export regularly.</p>
 </section>
 </main>
 <div id="sheet" hidden></div>
 <div id="login" hidden style="position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px">
-<div class="card" style="width:100%;max-width:380px;margin:0"><h2 id="lt2">Sign in</h2>
+<div class="card" style="width:100%;max-width:380px;margin:0"><h2 id="lt2">Sign in</h2><div id="linv" hidden class="card" style="margin:0 0 10px;font-size:13px;background:var(--m)"></div>
 <div id="lname" hidden><div class="lbl">YOUR NAME</div><input id="lnm" placeholder="Full name" autocomplete="name"></div>
 <div class="lbl">EMAIL</div><input id="lem" type="email" autocomplete="email" placeholder="you@example.com">
 <div class="lbl">PASSWORD</div><input id="lpw" type="password" autocomplete="current-password" placeholder="At least 8 characters">
 <div id="lmsg" class="mut" style="min-height:20px;margin:8px 0;font-size:13px"></div>
 <div class="acts"><button class="pri" data-act="lgo" id="lgo">Sign in</button><button data-act="lmode" id="lmode">New here? Create account</button><button data-act="lclose">Cancel</button></div></div></div>
+<div id="savebar" class="card" hidden style="position:fixed;left:10px;right:10px;bottom:10px;z-index:25;margin:0;padding:10px 12px;display:flex;gap:8px;align-items:center"><span id="savemsg" style="flex:1;font-size:13px"></span><button class="pri" data-act="savechg">Save</button><button data-act="discard">Discard</button></div>
 <div id="toast" hidden></div>
 <script>
 const $=s=>document.querySelector(s),KEY='relative-analyser-v1',W=124,NH=46,H=130,GS=14,GU=34;
@@ -291,12 +296,12 @@ function fromRemote(ps,pl,sl){const n={};ps.forEach(r=>n[r.id]={id:r.id,first:r.
 const setSt=t=>{const h=$('#hs');if(h)h.textContent=t};
 let syncing=false,RO=false;
 function setRO(v){RO=v;document.body.classList.toggle('ro',v);try{localStorage.setItem(KEY+'-ro',v?'1':'')}catch(e){}}
-async function syncDown(manual){if(syncing)return;if(ADM&&BASE&&pushT){clearTimeout(pushT);pushT=0;await pushChanges()}syncing=true;setSt('Syncing…');
+async function syncDown(manual){if(syncing)return;if(ADM&&BASE&&isDirty()){if(!manual||!confirm('You have unsaved changes. Reload from the database and discard them?'))return}syncing=true;setSt('Syncing…');
  try{const[ps,pl,sl]=await Promise.all([sbGet('persons?select=id,first_name,last_name,gender,birth_date,death_date,place,notes&status=eq.approved&order=id'),
    sbGet('parent_links?select=child_id,parent_id&status=eq.approved&order=child_id,parent_id'),sbGet('spouse_links?select=a_id,b_id&status=eq.approved&order=a_id,b_id')]);
   if(!ps.length)throw new Error('no people returned - check access rules');
   try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch(e){}
-  P=fromRemote(ps,pl,sl);setRO(!ADM);BASE=snap();sel=null;foc=Object.keys(P)[0]||null;save();$('#sheet').hidden=true;draw();needFit=1;if(!$('#tree').hidden){fit();needFit=0}renderData();
+  P=fromRemote(ps,pl,sl);setRO(!ADM);BASE=snap();setTimeout(showBar,0);sel=null;foc=Object.keys(P)[0]||null;save();$('#sheet').hidden=true;draw();needFit=1;if(!$('#tree').hidden){fit();needFit=0}renderData();
   const t=new Date().toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});try{localStorage.setItem('ra-last-sync',t)}catch(e){}
   setSt('Synced '+t+' · '+Object.keys(P).length+' people');if(manual)toast('Loaded '+Object.keys(P).length+' people from the database')}
  catch(e){let t='';try{t=localStorage.getItem('ra-last-sync')||''}catch(x){}setSt(t?'Offline · saved copy from '+t:'Offline · saved data');if(manual)toast('Could not sync: '+e.message)}
@@ -307,7 +312,16 @@ const snap=()=>JSON.parse(JSON.stringify(P)),ord=(a,b)=>a<b?[a,b]:[b,a];
 const pairsP=o=>{const s=new Set();for(const i in o)for(const q of o[i].par)if(o[q])s.add(i+'|'+q);return s};
 const pairsS=o=>{const s=new Set();for(const i in o)for(const q of o[i].sp)if(o[q]){const[a,b]=ord(i,q);s.add(a+'|'+b)}return s};
 const prow=p=>({first_name:p.first||'',last_name:p.last||'',gender:p.gender||'',birth_date:p.birth||'',death_date:p.death||'',place:p.place||'',notes:p.notes||''});
-function schedPush(){if(!ADM||!BASE)return;clearTimeout(pushT);pushT=setTimeout(()=>{pushT=0;pushChanges()},700);setSt('Saving…')}
+function schedPush(){if(!ADM||!BASE)return;showBar()}
+function diffSum(){if(!BASE)return null;const B=BASE,N=P;let pe=0,pa=0,pd=0,la=0,ld=0;
+ for(const i in N){if(!B[i])pa++;else if(JSON.stringify(prow(N[i]))!=JSON.stringify(prow(B[i])))pe++}for(const i in B)if(!N[i])pd++;
+ const pb=pairsP(B),pn=pairsP(N),sb=pairsS(B),sn=pairsS(N),both=k=>k.split('|').every(x=>N[x]);
+ for(const k of pn)if(!pb.has(k))la++;for(const k of sn)if(!sb.has(k))la++;for(const k of pb)if(!pn.has(k)&&both(k))ld++;for(const k of sb)if(!sn.has(k)&&both(k))ld++;
+ return{pe,pa,pd,la,ld,n:pe+pa+pd+la+ld}}
+const isDirty=()=>{const d=diffSum();return !!d&&d.n>0};
+function showBar(){const b=$('#savebar');if(!b)return;const d=ADM?diffSum():null,n=d?d.n:0;b.hidden=!n;document.body.classList.toggle('dirty',!!n);
+ if(n)$('#savemsg').textContent='Unsaved changes: '+[[d.pe,'person edited'],[d.pa,'person added'],[d.pd,'person deleted'],[d.la,'link added'],[d.ld,'link removed']].filter(x=>x[0]).map(x=>x[0]+' '+x[1]).join(', ')}
+function discardChanges(){if(!BASE||!confirm('Discard all unsaved changes?'))return;P=JSON.parse(JSON.stringify(BASE));sel=null;try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}$('#sheet').hidden=true;draw();renderData();showBar();toast('Changes discarded')}
 async function dbq(method,path,body){const r=await fetch(`${SB}/rest/v1/${path}`,{method,headers:{...(await authHeaders()),'Content-Type':'application/json',Prefer:'return=minimal'},body:body?JSON.stringify(body):undefined});
  if(!r.ok){let m='';try{m=(await r.json()).message||''}catch(e){}throw new Error(m||('HTTP '+r.status))}}
 async function pushChanges(){if(pushing){again=true;return}pushing=true;
@@ -321,7 +335,7 @@ async function pushChanges(){if(pushing){again=true;return}pushing=true;
   const aP=[...pn].filter(k=>!pb.has(k)),aS=[...sn].filter(k=>!sb.has(k));
   if(aP.length)await dbq('POST','parent_links',aP.map(k=>{const[c,p]=k.split('|');return{child_id:c,parent_id:p,status:'approved'}}));
   if(aS.length)await dbq('POST','spouse_links',aS.map(k=>{const[a,b]=k.split('|');return{a_id:a,b_id:b,status:'approved'}}));
-  BASE=N;setSt('Saved ✓ '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}
+  BASE=N;showBar();setSt('Saved ✓ '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}
  catch(e){const m='Not saved: '+(/Failed to fetch/.test(e.message)?'no internet connection':e.message);BASE=null;pushing=false;await syncDown(false);toast(m)}
  finally{pushing=false;if(again){again=false;schedPush()}}}
 function unlink(spec){const[k,id]=spec.split(':'),c=P[sel];if(!ADM||!c||!P[id])return;if(!confirm('Remove the link between '+nm(c)+' and '+nm(P[id])+'? (Nobody is deleted.)'))return;
@@ -339,7 +353,7 @@ async function authHeaders(){const h={apikey:SK};
  if(SES)h.Authorization='Bearer '+SES.access_token;return h}
 async function loadMe(){ME=null;if(!SES)return;try{const r=await fetch(`${SB}/rest/v1/profiles?select=role,trust_id,full_name&id=eq.${SES.uid}`,{headers:await authHeaders()});if(r.ok){const a=await r.json();ME=a[0]||{role:'viewer',trust_id:null}}}catch(e){}}
 const myRole=()=>SES&&ME&&ME.trust_id?ME.role:(SES?'viewer':'guest');
-function applyRole(){const r=myRole();ADM=!!SES&&(r=='admin'||r=='developer');setRO(!ADM);const rr=r,c=r=='contributor'||r=='admin'||r=='developer',a=r=='admin'||r=='developer',B=document.body.classList;B.toggle('in',!!SES);B.toggle('r-c',c);B.toggle('r-a',a);
+function applyRole(){const r=myRole();ADM=!!SES&&(r=='admin'||r=='developer');setRO(!ADM);const rr=r,c=r=='contributor'||r=='admin'||r=='developer',a=r=='admin'||r=='developer',B=document.body.classList;B.toggle('in',!!SES);B.toggle('r-c',c);B.toggle('r-a',a);{const td=$('#tabData');if(td){td.hidden=!c;if(!c&&!$('#data').hidden)show('tree')}}showBar();
  const m=$('#toolsmsg');if(m)m.textContent={guest:'Guest: you can browse the tree and the relation finder. Sign in to take part.',viewer:'Viewer: you can browse the tree and the relation finder. Editing needs an invite from an admin.',contributor:'Contributor: you will add your own branch here (coming in task 4.2).',admin:'Admin: you can edit people and links directly. Tap a person, then change the details or use the ✕ beside a link. Changes save to the shared database. Invites and the review queue come next.',developer:'Developer: same tools as an admin.'}[r]||''}
 async function selfTest(){const o=$('#chkout');if(!SES){o.textContent='Sign in first.';return}o.textContent='Checking…';const L=[],H=await authHeaders(),J={...H,'Content-Type':'application/json',Prefer:'return=representation'},r=myRole(),adm=r=='admin'||r=='developer',ok=(t,p)=>L.push((p?'✅ ':'⚠️ ')+t);
  try{let x=await fetch(`${SB}/rest/v1/persons?select=id&status=eq.approved&limit=1`,{headers:H});ok('Can read the approved tree',x.ok);
@@ -357,9 +371,32 @@ async function doLogin(){const em=$('#lem').value.trim(),pw=$('#lpw').value,msg=
  if(!em||pw.length<8)return msg('Enter your email and a password of at least 8 characters.');msg('Please wait…');$('#lgo').disabled=true;
  try{const up=lmode=='up',j=up?await authCall('signup',{email:em,password:pw,data:{full_name:$('#lnm').value.trim()}}):await authCall('token?grant_type=password',{email:em,password:pw}),s=toSes(j);
   if(!s){msg('Account created, but email confirmation is still switched on in the database settings. Ask the admin to turn it off, then sign in.');return}
-  saveSes(s);$('#login').hidden=true;$('#lpw').value='';ME=null;renderAcct();await loadMe();renderAcct();toast('Signed in as '+s.email);syncDown(false)}
+  saveSes(s);$('#login').hidden=true;$('#lpw').value='';ME=null;renderAcct();toast('Signed in as '+s.email);await redeemPending();await loadMe();renderAcct();syncDown(false)}
  catch(e){msg(/Failed to fetch|NetworkError/i.test(e.message)?'No internet connection.':e.message)}finally{$('#lgo').disabled=false}}
-async function doLogout(){try{await authCall('logout',{},SES&&SES.access_token)}catch(e){}saveSes(null);ME=null;renderAcct();toast('Signed out');syncDown(false)}
+async function doLogout(){if(ADM&&BASE&&isDirty()&&!confirm('You have unsaved changes that will be lost. Sign out anyway?'))return;try{await authCall('logout',{},SES&&SES.access_token)}catch(e){}saveSes(null);ME=null;renderAcct();toast('Signed out');syncDown(false)}
+/* ---------- invites: admin creates a link, a new person opens it, signs up and gets the role ---------- */
+const lsg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lss=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
+let lastInv=null;
+const invLink=c=>location.origin+location.pathname+'?invite='+c;
+async function copyText(t){try{await navigator.clipboard.writeText(t);toast('Copied')}catch(e){const a=$('#ivlink');if(a){a.select();try{document.execCommand('copy');toast('Copied')}catch(x){toast('Select the link and copy it')}}}}
+async function mkInvite(){const o=$('#ivout');o.textContent='Creating…';
+ try{const days=+$('#ivd').value,r=await fetch(`${SB}/rest/v1/invites`,{method:'POST',headers:{...(await authHeaders()),'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({trust_id:ME.trust_id,role:$('#ivr').value,max_uses:+$('#ivu').value,expires_at:new Date(Date.now()+days*864e5).toISOString()})});
+  if(!r.ok){let m='';try{m=(await r.json()).message}catch(e){}throw new Error(m||('HTTP '+r.status))}
+  const v=(await r.json())[0],L=invLink(v.code);lastInv={L,role:v.role};
+  o.innerHTML=`<div class="mut" style="margin:8px 0 4px">Link for a ${esc(v.role)} (valid ${days} days, ${v.max_uses} use${v.max_uses>1?'s':''}):</div><input id="ivlink" readonly value="${esc(L)}"><div class="acts"><button data-act="ivcopy">Copy link</button><button class="pri" data-act="ivwa">Share on WhatsApp</button></div>`;listInvites()}
+ catch(e){o.textContent='Could not create the invite: '+e.message}}
+async function listInvites(){const b=$('#ivlist');try{const r=await fetch(`${SB}/rest/v1/invites?select=id,code,role,max_uses,used_count,expires_at,revoked&order=created_at.desc&limit=15`,{headers:await authHeaders()}),a=await r.json();
+ b.innerHTML=a.map(i=>{const x=new Date(i.expires_at),live=!i.revoked&&i.used_count<i.max_uses&&x>new Date();return `<div class="person" style="cursor:default"><span>${esc(i.role)} · ${esc(i.code.slice(0,6))}…<br><small>${i.used_count}/${i.max_uses} used · ${live?'valid till '+x.toLocaleDateString():(i.revoked?'revoked':'used up or expired')}</small></span>${live?`<button data-rv="${esc(i.id)}">Revoke</button>`:''}</div>`}).join('')||'No invites yet.'}catch(e){b.textContent='Could not load invites.'}}
+async function revokeInv(id){try{const r=await fetch(`${SB}/rest/v1/invites?id=eq.${id}`,{method:'PATCH',headers:{...(await authHeaders()),'Content-Type':'application/json'},body:JSON.stringify({revoked:true})});if(!r.ok)throw new Error('HTTP '+r.status);toast('Invite revoked');listInvites()}catch(e){toast('Could not revoke: '+e.message)}}
+async function redeemPending(){const c=lsg('ra-invite');if(!c||!SES)return;
+ try{const r=await fetch(`${SB}/rest/v1/rpc/redeem_invite`,{method:'POST',headers:{...(await authHeaders()),'Content-Type':'application/json'},body:JSON.stringify({p_code:c})}),j=await r.json();lss('ra-invite',null);$('#linv').hidden=true;
+  toast(r.ok&&j&&j.ok?(j.message=='Welcome'?'Welcome to '+j.trust+' as '+j.role:j.message):((j&&j.message)||'This invite could not be used.'))}
+ catch(e){toast('Could not use the invite — check your internet and open the link again.')}}
+async function showInvite(c){try{const r=await fetch(`${SB}/rest/v1/rpc/invite_info`,{method:'POST',headers:{apikey:SK,'Content-Type':'application/json'},body:JSON.stringify({p_code:c})}),j=await r.json();
+ if(!j||!j.trust){lss('ra-invite',null);toast('This invite link is not valid any more.');return}
+ lmode='up';setLM();$('#linv').textContent='You are invited to join '+j.trust+' as '+j.role+'. Create your account, or sign in if you already have one.';$('#linv').hidden=false;$('#login').hidden=false}catch(e){}}
+async function startInvite(){const q=new URLSearchParams(location.search).get('invite');if(q){lss('ra-invite',q);try{history.replaceState(null,'',location.pathname)}catch(e){}}
+ await loadMe();if(SES&&lsg('ra-invite')){await redeemPending();await loadMe()}renderAcct();const c=lsg('ra-invite');if(c&&!SES)showInvite(c)}
 /* ---------- views ---------- */
 function show(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==t));
  ['tree','people','rel','data'].forEach(s=>$('#'+s).hidden=s!=t);if(t!='tree')$('#sheet').hidden=true;
@@ -495,12 +532,15 @@ function doImport(t){try{t=t.replace(/^\ufeff/,'');if(!t.trim())return toast('No
  if(!Object.keys(n).length)return toast('No people found — is this a CSV from this app or a .ftt file?');setData(n);show('tree')}catch(x){toast('Import failed: '+(x.message||x))}}
 $('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;toast('Reading '+f.name+'…');const rd=new FileReader();
  rd.onload=()=>doImport(decode(rd.result));rd.onerror=()=>toast('Could not read that file');rd.readAsArrayBuffer(f);e.target.value=''};
-document.addEventListener('click',e=>{const u=e.target.closest('[data-un]');if(u){unlink(u.dataset.un);return}const t=e.target.closest('[data-tab],[data-act],[data-go]');if(!t)return;
+document.addEventListener('click',e=>{const rv=e.target.closest('[data-rv]');if(rv){revokeInv(rv.dataset.rv);return}const u=e.target.closest('[data-un]');if(u){unlink(u.dataset.un);return}const t=e.target.closest('[data-tab],[data-act],[data-go]');if(!t)return;
  if(t.dataset.tab)return show(t.dataset.tab);
  if(t.dataset.go){show('tree');if(mode!='full')focusOn(t.dataset.go);else{select(t.dataset.go);centerOn(t.dataset.go)}return}
  const a=t.dataset.act,r=svg.getBoundingClientRect();
  if(a=='chk'){selfTest();return}
- if(a=='login'){if(SES)show('data');else{lmode='in';setLM();$('#login').hidden=false}return}
+ if(a=='savechg'){pushChanges();return}if(a=='discard'){discardChanges();return}
+ if(a=='login'){if(SES){if(myRole()=='viewer'){if(confirm('Signed in as '+SES.email+'. Sign out?'))doLogout()}else show('data')}else{lmode='in';setLM();$('#login').hidden=false}return}
+ if(a=='inv'){$('#invbox').hidden=!$('#invbox').hidden;if(!$('#invbox').hidden)listInvites();return}if(a=='mkinv'){mkInvite();return}
+ if(a=='ivcopy'){copyText(lastInv.L);return}if(a=='ivwa'){window.open('https://wa.me/?text='+encodeURIComponent('आपको हमारे समाज के पारिवारिक वृक्ष में आमंत्रित किया गया है ('+lastInv.role+'). लिंक खोलें, अपना खाता बनाएँ:\nYou are invited to our community family tree as '+lastInv.role+'. Open the link and create your account:\n'+lastInv.L),'_blank');return}
  if(a=='lgo'){doLogin();return}if(a=='lmode'){lmode=lmode=='in'?'up':'in';setLM();return}if(a=='lclose'){$('#login').hidden=true;return}if(a=='lout'){doLogout();return}
  if(RO&&['new','par','chi','spo','lnk','del','ip','undo'].includes(a))return toast(myRole()=='contributor'||myRole()=='admin'||myRole()=='developer'?'Adding people arrives in the next tasks (4.2 / 5.1)':'Read-only: only invited contributors can add people');
  if(a=='new'){show('tree');const p=add({});save();foc=p.id;select(p.id);syF&&syF();centerOn(p.id);const f=$('#sheet [data-f=first]');f&&f.focus()}
@@ -512,5 +552,5 @@ document.addEventListener('click',e=>{const u=e.target.closest('[data-un]');if(u
  else if(a=='swap'){const v=$('#ra').value;$('#ra').value=$('#rb').value;$('#rb').value=v;syA();syB();renderRel()}
  else if(a=='undo'){try{const b=JSON.parse(localStorage.getItem(KEY+'-bak'));if(b)setData(b);else toast('No backup yet')}catch(x){toast('No backup yet')}}});
 try{P=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){P={}}
-foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);loadMe().then(renderAcct);$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
+foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);startInvite();window.addEventListener('beforeunload',e=>{if(ADM&&BASE&&isDirty()){e.preventDefault();e.returnValue=''}});$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
 </script></body></html>
