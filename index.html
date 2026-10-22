@@ -75,6 +75,7 @@ body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi]
 #chkout{white-space:pre-line;font-size:13px;margin-top:8px}
 .eo,[data-act=ip],[data-act=undo]{display:none!important}body.ro .ro1{display:none!important}
 body.dirty #sheet{padding-bottom:90px}body.dirty .rb{bottom:74px}.ad{display:none}body.r-a .ad{display:block}
+.rcb{display:none}body.r-c .rcb{display:block}
 </style></head>
 <body>
 <header><div><h1>Relative Analyser</h1><div id="hs" class="mut" style="font-size:11px"></div></div><div style="display:flex;gap:6px"><button id="lgb" data-act="login">Sign in</button><button class="pri" data-act="new">+ Person</button></div></header>
@@ -95,8 +96,8 @@ body.dirty #sheet{padding-bottom:90px}body.dirty .rb{bottom:74px}.ad{display:non
 <div id="rres"></div></section>
 <section id="data" hidden>
 <div id="acct" class="card" style="margin:0 0 10px"></div>
-<div id="tools" class="card" style="margin:0 0 10px"><b>Your tools</b><div id="toolsmsg" class="mut" style="margin:4px 0 8px"></div>
-<div class="acts"><button class="rc" disabled>Add my branch · task 4.2</button><button class="ra" data-act="inv">Invite people</button><button class="ra" disabled>Review queue · task 5.1</button><button class="ra" disabled>Users &amp; roles · task 5.3</button><button class="rs" data-act="chk">Check my access</button></div><div id="chkout"></div></div>
+<div id="tools" class="card" style="margin:0 0 10px"><b>Your tools</b><div id="toolsmsg" class="mut" style="margin:4px 0 8px"></div><div id="ancard" class="rcb"></div>
+<div class="acts"><button class="rc" data-act="mybranch">Find my relative</button><button class="rc" disabled>Add my branch · task 4.2</button><button class="ra" data-act="inv">Invite people</button><button class="ra" disabled>Review queue · task 5.1</button><button class="ra" disabled>Users &amp; roles · task 5.3</button><button class="rs" data-act="chk">Check my access</button></div><div id="chkout"></div></div>
 <div id="invbox" class="card ad" hidden style="margin:0 0 10px"><b>Invite people</b>
 <div class="row" style="margin-top:8px"><select id="ivr"><option value="contributor">Contributor</option><option value="viewer">Viewer</option><option value="admin">Admin (full access)</option></select><select id="ivd"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select><select id="ivu"><option value="1">1 person</option><option value="5">5 people</option><option value="20">20 people</option></select></div>
 <div class="acts"><button class="pri" data-act="mkinv">Create invite link</button></div><div id="ivout"></div><div class="lbl">RECENT INVITES</div><div id="ivlist" class="mut">…</div></div>
@@ -117,6 +118,12 @@ body.dirty #sheet{padding-bottom:90px}body.dirty .rb{bottom:74px}.ad{display:non
 <div id="lmsg" class="mut" style="min-height:20px;margin:8px 0;font-size:13px"></div>
 <div class="acts"><button class="pri" data-act="lgo" id="lgo">Sign in</button><button data-act="lmode" id="lmode">New here? Create account</button><button data-act="lclose">Cancel</button></div></div></div>
 <div id="savebar" class="card" hidden style="position:fixed;left:10px;right:10px;bottom:10px;z-index:25;margin:0;padding:10px 12px;display:flex;gap:8px;align-items:center"><span id="savemsg" style="flex:1;font-size:13px"></span><button class="pri" data-act="savechg">Save</button><button data-act="discard">Discard</button></div>
+<div id="anchor" hidden style="position:fixed;inset:0;z-index:28;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center">
+<div class="card" style="width:100%;max-width:520px;margin:0;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0"><h2>Find your relative</h2>
+<p class="mut" style="font-size:13px;margin:0 0 8px">Search for someone who is already in the tree and is your relative, for example your father, grandfather or uncle. Type the name, then tap the right person.<br>पेड़ में पहले से मौजूद अपने किसी रिश्तेदार को खोजें, जैसे पिताजी, दादाजी या चाचाजी।</p>
+<input id="anq" placeholder="Search by name, village or parent's name…" autocomplete="off">
+<div id="anlist"></div><div id="anpick" hidden></div>
+<div class="acts"><button data-act="anclose">Close</button></div></div></div>
 <div id="toast" hidden></div>
 <script>
 const $=s=>document.querySelector(s),KEY='relative-analyser-v1',W=124,NH=46,H=130,GS=14,GU=34;
@@ -397,13 +404,28 @@ async function showInvite(c){try{const r=await fetch(`${SB}/rest/v1/rpc/invite_i
  lmode='up';setLM();$('#linv').textContent='You are invited to join '+j.trust+' as '+j.role+'. Create your account, or sign in if you already have one.';$('#linv').hidden=false;$('#login').hidden=false}catch(e){}}
 async function startInvite(){const q=new URLSearchParams(location.search).get('invite');if(q){lss('ra-invite',q);try{history.replaceState(null,'',location.pathname)}catch(e){}}
  await loadMe();if(SES&&lsg('ra-invite')){await redeemPending();await loadMe()}renderAcct();const c=lsg('ra-invite');if(c&&!SES)showInvite(c)}
+/* ---------- contributor: find the existing relative to attach a new branch to ---------- */
+let ANC=null;
+const ancKey=()=>'ra-anchor-'+(SES?SES.uid:'x');
+function anSummary(p){const par=p.par.filter(i=>P[i]).map(i=>nm(P[i])),sp=p.sp.filter(i=>P[i]).map(i=>nm(P[i])),k=kidsOf(p.id).length;
+ return[par.length?'child of '+par.join(' & '):'',sp.length?'spouse '+sp.join(', '):'',k?k+' child'+(k>1?'ren':''):''].filter(Boolean).join(' · ')||'no linked relatives yet'}
+function anSearch(){const q=$('#anq').value.trim().toLowerCase(),b=$('#anlist');$('#anpick').hidden=true;if(!q){b.innerHTML='<p class="mut">Type a name to search.</p>';return}
+ const ws=q.split(/\s+/),st=p=>nm(p).toLowerCase().startsWith(ws[0])?0:1,
+ L=Object.values(P).filter(p=>{const t=(lab(p)+' '+(p.last||'')).toLowerCase();return ws.every(x=>t.includes(x))}).sort((x,y)=>st(x)-st(y)||nm(x).localeCompare(nm(y)));
+ b.innerHTML=L.slice(0,40).map(p=>`<div class="person" data-ap="${esc(p.id)}"><span>${esc(nm(p))}<br><small>${esc(p.place||'')}${p.place?' · ':''}${esc(anSummary(p))}</small></span></div>`).join('')+(L.length>40?`<p class="mut">${L.length-40} more — type more letters to narrow down.</p>`:'')||'<p class="mut">No match. Check the spelling, or search for another relative.</p>'}
+function anPick(id){const p=P[id];if(!p)return;$('#anlist').innerHTML='';
+ $('#anpick').innerHTML=`<div class="card hl" style="margin-top:8px"><b>${esc(nm(p))}</b><div class="mut">${esc(p.place||'')}</div><div class="mut" style="margin-top:4px">${esc(anSummary(p))}</div><div class="acts"><button class="pri" data-act="anyes" data-id="${esc(id)}">Yes, this is my relative</button><button data-act="anshow" data-id="${esc(id)}">Show in tree</button><button data-act="anagain">Search again</button></div></div>`;$('#anpick').hidden=false}
+function openAnchor(){$('#anchor').hidden=false;$('#anq').value='';anSearch();setTimeout(()=>$('#anq').focus(),60)}
+function setAnchor(id){ANC=id;lss(ancKey(),id);$('#anchor').hidden=true;renderAnchor();toast('Your relative: '+nm(P[id]))}
+function renderAnchor(){const c=$('#ancard');if(!c)return;ANC=lsg(ancKey());if(ANC&&!P[ANC])ANC=null;
+ c.innerHTML=ANC?`<div class="mut" style="font-size:12px">YOUR RELATIVE IN THE TREE</div><div><b>${esc(nm(P[ANC]))}</b> <small class="mut">${esc(P[ANC].place||'')}</small></div><div class="mut" style="font-size:12px">${esc(anSummary(P[ANC]))}</div><div class="acts"><button data-act="mybranch">Change</button><button data-act="anshow" data-id="${esc(ANC)}">Show in tree</button></div>`:'<div class="mut" style="margin-bottom:8px">Start by finding your relative who is already in the tree.</div>'}
 /* ---------- views ---------- */
 function show(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==t));
  ['tree','people','rel','data'].forEach(s=>$('#'+s).hidden=s!=t);if(t!='tree')$('#sheet').hidden=true;
  if(t=='tree'&&needFit){fit();needFit=0}if(t=='people')renderList();if(t=='rel')fillRel();if(t=='data')renderData()}
 function renderList(){const q=$('#q').value.toLowerCase(),a=Object.values(P).filter(p=>nm(p).toLowerCase().includes(q)).sort((x,y)=>nm(x).localeCompare(nm(y)));
  $('#list').innerHTML=a.map(p=>`<div class="person" data-go="${esc(p.id)}"><span>${esc(nm(p))}<br><small>${esc(dates(p))}</small></span><small>${p.par.length?'↑'+p.par.length+' ':''}${p.sp.length?'♥'+p.sp.length:''}</small></div>`).join('')||'<p class="mut">Nobody yet.</p>'}
-function renderData(){renderAcct();const a=Object.values(P);$('#stat').textContent=a.length+' people · '+a.reduce((s,p)=>s+p.sp.length,0)/2+' couples · '+a.reduce((s,p)=>s+p.par.length,0)+' parent links';$('#csv').value=toCSV()}
+function renderData(){renderAcct();renderAnchor();const a=Object.values(P);$('#stat').textContent=a.length+' people · '+a.reduce((s,p)=>s+p.sp.length,0)/2+' couples · '+a.reduce((s,p)=>s+p.par.length,0)+' parent links';$('#csv').value=toCSV()}
 async function download(){const d=window.claude?await claude.use('downloads'):null;
  if(!d){try{const b=new Blob(['\ufeff'+toCSV()],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='relatives.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}catch(e){toast('Download unavailable here — copy the text instead')}return}
  try{await d.save({filename:'relatives.csv',data:'\ufeff'+toCSV()})}catch(e){if(e.code!='declined')toast('Not saved ('+(e.code||'error')+') — copy the text instead')}}
@@ -532,11 +554,13 @@ function doImport(t){try{t=t.replace(/^\ufeff/,'');if(!t.trim())return toast('No
  if(!Object.keys(n).length)return toast('No people found — is this a CSV from this app or a .ftt file?');setData(n);show('tree')}catch(x){toast('Import failed: '+(x.message||x))}}
 $('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;toast('Reading '+f.name+'…');const rd=new FileReader();
  rd.onload=()=>doImport(decode(rd.result));rd.onerror=()=>toast('Could not read that file');rd.readAsArrayBuffer(f);e.target.value=''};
-document.addEventListener('click',e=>{const rv=e.target.closest('[data-rv]');if(rv){revokeInv(rv.dataset.rv);return}const u=e.target.closest('[data-un]');if(u){unlink(u.dataset.un);return}const t=e.target.closest('[data-tab],[data-act],[data-go]');if(!t)return;
+document.addEventListener('click',e=>{const ap=e.target.closest('[data-ap]');if(ap){anPick(ap.dataset.ap);return}const rv=e.target.closest('[data-rv]');if(rv){revokeInv(rv.dataset.rv);return}const u=e.target.closest('[data-un]');if(u){unlink(u.dataset.un);return}const t=e.target.closest('[data-tab],[data-act],[data-go]');if(!t)return;
  if(t.dataset.tab)return show(t.dataset.tab);
  if(t.dataset.go){show('tree');if(mode!='full')focusOn(t.dataset.go);else{select(t.dataset.go);centerOn(t.dataset.go)}return}
  const a=t.dataset.act,r=svg.getBoundingClientRect();
  if(a=='chk'){selfTest();return}
+ if(a=='mybranch'){openAnchor();return}if(a=='anclose'){$('#anchor').hidden=true;return}if(a=='anyes'){setAnchor(t.dataset.id);return}
+ if(a=='anshow'){$('#anchor').hidden=true;show('tree');focusOn(t.dataset.id);return}if(a=='anagain'){$('#anpick').hidden=true;anSearch();$('#anq').focus();return}
  if(a=='savechg'){pushChanges();return}if(a=='discard'){discardChanges();return}
  if(a=='login'){if(SES){if(myRole()=='viewer'){if(confirm('Signed in as '+SES.email+'. Sign out?'))doLogout()}else show('data')}else{lmode='in';setLM();$('#login').hidden=false}return}
  if(a=='inv'){$('#invbox').hidden=!$('#invbox').hidden;if(!$('#invbox').hidden)listInvites();return}if(a=='mkinv'){mkInvite();return}
@@ -552,5 +576,5 @@ document.addEventListener('click',e=>{const rv=e.target.closest('[data-rv]');if(
  else if(a=='swap'){const v=$('#ra').value;$('#ra').value=$('#rb').value;$('#rb').value=v;syA();syB();renderRel()}
  else if(a=='undo'){try{const b=JSON.parse(localStorage.getItem(KEY+'-bak'));if(b)setData(b);else toast('No backup yet')}catch(x){toast('No backup yet')}}});
 try{P=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){P={}}
-foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);startInvite();window.addEventListener('beforeunload',e=>{if(ADM&&BASE&&isDirty()){e.preventDefault();e.returnValue=''}});$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
+foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);startInvite();$('#anq').oninput=anSearch;window.addEventListener('beforeunload',e=>{if(ADM&&BASE&&isDirty()){e.preventDefault();e.returnValue=''}});$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
 </script></body></html>
