@@ -76,6 +76,7 @@ body.ro .eo,body.ro [data-act=par],body.ro [data-act=spo],body.ro [data-act=chi]
 .eo,[data-act=ip],[data-act=undo]{display:none!important}body.ro .ro1{display:none!important}
 body.dirty #sheet{padding-bottom:90px}body.dirty .rb{bottom:74px}.ad{display:none}body.r-a .ad{display:block}
 .rcb{display:none}body.r-c .rcb{display:block}
+body.cb [data-act=new]{display:none!important}.n.dr circle{stroke-dasharray:4 3}
 </style></head>
 <body>
 <header><div><h1>Relative Analyser</h1><div id="hs" class="mut" style="font-size:11px"></div></div><div style="display:flex;gap:6px"><button id="lgb" data-act="login">Sign in</button><button class="pri" data-act="new">+ Person</button></div></header>
@@ -97,7 +98,7 @@ body.dirty #sheet{padding-bottom:90px}body.dirty .rb{bottom:74px}.ad{display:non
 <section id="data" hidden>
 <div id="acct" class="card" style="margin:0 0 10px"></div>
 <div id="tools" class="card" style="margin:0 0 10px"><b>Your tools</b><div id="toolsmsg" class="mut" style="margin:4px 0 8px"></div><div id="ancard" class="rcb"></div>
-<div class="acts"><button class="rc" data-act="mybranch">Find my relative</button><button class="rc" disabled>Add my branch · task 4.2</button><button class="ra" data-act="inv">Invite people</button><button class="ra" disabled>Review queue · task 5.1</button><button class="ra" disabled>Users &amp; roles · task 5.3</button><button class="rs" data-act="chk">Check my access</button></div><div id="chkout"></div></div>
+<div class="acts"><button class="rc" data-act="mybranch">Find my relative</button><button class="rc" data-act="mybr2">Add my branch</button><button class="ra" data-act="inv">Invite people</button><button class="ra" disabled>Review queue · task 5.1</button><button class="ra" disabled>Users &amp; roles · task 5.3</button><button class="rs" data-act="chk">Check my access</button></div><div id="chkout"></div></div>
 <div id="invbox" class="card ad" hidden style="margin:0 0 10px"><b>Invite people</b>
 <div class="row" style="margin-top:8px"><select id="ivr"><option value="contributor">Contributor</option><option value="viewer">Viewer</option><option value="admin">Admin (full access)</option></select><select id="ivd"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select><select id="ivu"><option value="1">1 person</option><option value="5">5 people</option><option value="20">20 people</option></select></div>
 <div class="acts"><button class="pri" data-act="mkinv">Create invite link</button></div><div id="ivout"></div><div class="lbl">RECENT INVITES</div><div id="ivlist" class="mut">…</div></div>
@@ -128,13 +129,13 @@ body.dirty #sheet{padding-bottom:90px}body.dirty .rb{bottom:74px}.ad{display:non
 <script>
 const $=s=>document.querySelector(s),KEY='relative-analyser-v1',W=124,NH=46,H=130,GS=14,GU=34;
 let P={},sel=null,pos={},view={x:0,y:0,k:1,r:0},needFit=1,tt,mode='focus',foc=null,pedge={},rp=null,lastRel=null,snd=true;
-const uid=()=>(ADM&&window.crypto&&crypto.randomUUID)?crypto.randomUUID():'P'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+const uid=()=>((ADM||CB)&&window.crypto&&crypto.randomUUID)?crypto.randomUUID():'P'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nm=p=>((p.first||'')+' '+(p.last||'')).trim()||'(unnamed)';
 const dates=p=>p.birth&&p.death?p.birth+' – '+p.death:p.birth?'b. '+p.birth:p.death?'d. '+p.death:'';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}try{schedPush()}catch(e){}};
 const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)};
-function add(o){const p={id:uid(),first:'',last:'',gender:'',birth:'',death:'',place:'',notes:'',par:[],sp:[],...o};P[p.id]=p;return p}
+function add(o){const p={id:uid(),first:'',last:'',gender:'',birth:'',death:'',place:'',notes:'',par:[],sp:[],...o};if(CB&&!p.st)p.st='draft';P[p.id]=p;return p}
 function link(a,b){if(!a.sp.includes(b.id))a.sp.push(b.id);if(!b.sp.includes(a.id))b.sp.push(a.id)}
 function clean(n){for(const p of Object.values(n)){p.par=[...new Set(p.par.filter(x=>n[x]&&x!=p.id))].slice(0,2);p.sp=p.sp.filter(x=>n[x]&&x!=p.id)}
  for(const p of Object.values(n))for(const s of p.sp)if(!n[s].sp.includes(p.id))n[s].sp.push(p.id);return n}
@@ -166,7 +167,7 @@ function order(rs,cl){if(rs.length<2)return rs;const by={},ad={};rs.forEach(r=>{
  rs.forEach(r=>{if(!seen[r.ti])seq.push(r)});return seq}
 /* each generation ring (dotted) and the people on it share one colour, so a generation is easy to follow around the chart */
 const RP=['#e76f51','#2a9d8f','#e9a820','#6a4c93','#1982c4','#7cb518','#ff595e','#ff924c'];let GC={};
-const fnode=(id,x,y)=>{const p=P[id],t=nm(p),d=dates(p);return `<g class="n ${p.gender} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><g class="u" transform="rotate(${-view.r})"><circle r="17"${LC[id]||GC[id]?` style="stroke:${LC[id]||GC[id]};stroke-width:${LC[id]?3.5:2.4}"`:''}/><text class="i" y="5">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="32">${esc(t.length>13?t.slice(0,12)+'…':t)}</text>${d?`<text class="d" y="44">${esc(d)}</text>`:''}</g></g>`};
+const fnode=(id,x,y)=>{const p=P[id],t=nm(p),d=dates(p);return `<g class="n ${p.gender} ${p.st&&p.st!='approved'?'dr':''} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><g class="u" transform="rotate(${-view.r})"><circle r="17"${LC[id]||GC[id]?` style="stroke:${LC[id]||GC[id]};stroke-width:${LC[id]?3.5:2.4}"`:''}/><text class="i" y="5">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="32">${esc(t.length>13?t.slice(0,12)+'…':t)}</text>${d?`<text class="d" y="44">${esc(d)}</text>`:''}</g></g>`};
 function fan(rts,cl){const single=rts.length==1,base=single?rts[0].g:-1,all=[],T=2*Math.PI,pq={};const E=[];let ex='',rg='',lk='',nh='',xl='';
  const dem=n=>{n.d=n.g-base;all.push(n);n.k.forEach(dem);const S=n.k.reduce((a,x)=>a+x.w,0);n.w=n.d?Math.max(SLOT*n.u.length/(n.d*RS),S):S||1},
  span=(n,a0,a1)=>{n.a0=a0;n.a1=a1;const S=n.k.reduce((a,x)=>a+x.w,0);let a=a0;n.k.forEach(x=>{const e=a+(a1-a0)*x.w/S;span(x,a,e);a=e})};
@@ -206,7 +207,7 @@ function drawFocus(){const c=P[foc],used={[foc]:1},it=[],R1=125,R2=235,rad=d=>d*
  pos={};for(const i in Q)pos[i]={x:Q[i].x-W/2,y:Q[i].y-NH/2};
  let s=`<circle class="ring" r="${R1}"/><circle class="ring" r="${R2}"/>`,n='';
  it.forEach(o=>{const a=Q[o.from]||Q[foc],b=Q[o.id];s+=`<path class="e ${o.dash||''}" d="M${a.x} ${a.y}L${b.x} ${b.y}"/>`});
- const node=(id,role)=>{const p=P[id],t=nm(p),k=id==foc;return `<g class="n ${p.gender} ${k?'ctr':''} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${Q[id].x},${Q[id].y})"><circle r="${k?28:21}"/><text class="i" y="${k?7:5}">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="${k?46:36}">${esc(t.length>16?t.slice(0,15)+'…':t)}</text><text class="${k?'d':'r'}" y="${k?59:48}">${esc(k?dates(p):role)}</text></g>`};
+ const node=(id,role)=>{const p=P[id],t=nm(p),k=id==foc;return `<g class="n ${p.gender} ${p.st&&p.st!='approved'?'dr':''} ${k?'ctr':''} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${Q[id].x},${Q[id].y})"><circle r="${k?28:21}"/><text class="i" y="${k?7:5}">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="${k?46:36}">${esc(t.length>16?t.slice(0,15)+'…':t)}</text><text class="${k?'d':'r'}" y="${k?59:48}">${esc(k?dates(p):role)}</text></g>`};
  for(const i in Q)n+=node(i,(it.find(o=>o.id==i)||{}).role);
  if(!it.length)n+='<text y="100" style="text-anchor:middle;fill:var(--mut);font-size:12px">No relatives linked yet — tap the person to add some</text>';
  $('#vp').innerHTML=s+n}
@@ -250,27 +251,27 @@ function centerOn(id){if(mode!='full'){fit();return}const c=pos[id],r=$('#svg').
 
 /* ---------- selection / editor sheet ---------- */
 function select(id){sel=id&&P[id]?id:null;draw();sel?openSheet():($('#sheet').hidden=true)}
-const chips=(ids,k)=>ids.filter(i=>P[i]).map(i=>`<span class="chip"><span data-go="${esc(i)}">${esc(nm(P[i]))}</span>${ADM&&k?` <b data-un="${k}:${esc(i)}" style="color:#b3402e;cursor:pointer">✕</b>`:''}</span>`).join('')||'<span class="mut">–</span>';
+const chips=(ids,k,p)=>ids.filter(i=>P[i]).map(i=>`<span class="chip"><span data-go="${esc(i)}">${esc(nm(P[i]))}</span>${k&&p&&canUnl(k,p.id,i)?` <b data-un="${k}:${esc(i)}" style="color:#b3402e;cursor:pointer">✕</b>`:''}</span>`).join('')||'<span class="mut">–</span>';
 function openSheet(){const p=P[sel],sh=$('#sheet'),kids=Object.values(P).filter(c=>c.par.includes(p.id)).map(c=>c.id);
  const opts=Object.values(P).filter(o=>o.id!=p.id).sort((a,b)=>nm(a).localeCompare(nm(b))).map(o=>`<option value="${esc(o.id)}">${esc(nm(o))}${o.birth?' ('+esc(o.birth)+')':''}</option>`).join('');
- sh.innerHTML=`<div class="row"><input data-f="first" placeholder="First name" value="${esc(p.first)}"><input data-f="last" placeholder="Surname" value="${esc(p.last)}"></div>
+ sh.innerHTML=`${p.st&&p.st!='approved'?`<div class="mut" style="margin-bottom:6px">✎ ${p.st=='pending'?'Waiting for admin approval':'Draft — only you and the admins can see it until it is approved'}</div>`:''}<div class="row"><input data-f="first" placeholder="First name" value="${esc(p.first)}"><input data-f="last" placeholder="Surname" value="${esc(p.last)}"></div>
  <div class="row"><select data-f="gender"><option value="">Gender: –</option><option value="M"${p.gender=='M'?' selected':''}>Male</option><option value="F"${p.gender=='F'?' selected':''}>Female</option></select><input data-f="birth" placeholder="Born (YYYY or YYYY-MM-DD)" value="${esc(p.birth)}"><input data-f="death" placeholder="Died" value="${esc(p.death)}"></div>
  <div class="row"><input data-f="place" placeholder="Place" value="${esc(p.place)}"><input data-f="notes" placeholder="Notes" value="${esc(p.notes)}"></div>
- <div class="lbl">Parents</div>${chips(p.par,'par')}<div class="lbl">Spouse(s)</div>${chips(p.sp,'sp')}<div class="lbl">Children</div>${chips(kids,'chi')}
+ <div class="lbl">Parents</div>${chips(p.par,'par',p)}<div class="lbl">Spouse(s)</div>${chips(p.sp,'sp',p)}<div class="lbl">Children</div>${chips(kids,'chi',p)}
  <div class="acts"><button data-act="par">+ Parent</button><button data-act="spo">+ Spouse</button><button data-act="chi">+ Child</button><button data-act="rel">Find relation</button><button data-act="net">View network</button></div>
  <div class="lbl ro1">Link an existing person as…</div><div class="row ro1"><select id="lk"><option value="par">Parent</option><option value="spo">Spouse</option><option value="chi">Child</option></select><select id="lt">${opts}</select><button data-act="lnk" style="flex:0 0 auto">Link</button></div>
- <div class="acts" style="justify-content:space-between"><button class="del" data-act="del">Delete</button><button data-act="close">Close</button></div>`;if(RO)sh.querySelectorAll('[data-f]').forEach(e=>e.disabled=true);sh.hidden=false}
+ <div class="acts" style="justify-content:space-between"><button class="del" data-act="del">Delete</button><button data-act="close">Close</button></div>`;if(RO||!canEdit(p))sh.querySelectorAll('[data-f]').forEach(e=>e.disabled=true);{const dl=sh.querySelector('[data-act=del]');if(dl)dl.hidden=!canDel(p)}sh.hidden=false}
 function addRel(k){const c=P[sel];if(!c)return;let n;
  if(k=='par'){if(c.par.length>=2)return toast('Already has two parents');n=add({});c.par.push(n.id);if(c.par.length==2)link(n,P[c.par[0]])}
  else if(k=='chi')n=add({par:[c.id,...(c.sp.length==1?c.sp:[])]});
  else{n=add({});link(c,n)}
  save();select(n.id);centerOn(n.id);const f=$('#sheet [data-f=first]');f&&f.focus()}
-function linkExisting(){const c=P[sel],t=P[$('#lt').value],k=$('#lk').value;if(!c||!t)return;
+function linkExisting(){const c=P[sel],t=P[$('#lt').value],k=$('#lk').value;if(!c||!t)return;if(CB&&!(isDr(c)||isDr(t)))return toast('You can link only your own draft people');
  if(k=='par'){if(c.par.length>=2||c.par.includes(t.id))return toast('Cannot add this parent');c.par.push(t.id);if(c.par.length==2)link(t,P[c.par[0]])}
  else if(k=='chi'){if(t.par.length>=2||t.par.includes(c.id))return toast('Cannot add this child');t.par.push(c.id)}
  else link(c,t);
  save();draw();openSheet()}
-function del(){const id=sel;if(!id)return;if(ADM&&!confirm('Delete '+nm(P[id])+' from the shared database? This also removes their links.'))return;delete P[id];for(const p of Object.values(P)){p.par=p.par.filter(x=>x!=id);p.sp=p.sp.filter(x=>x!=id)}save();select(null)}
+function del(){const id=sel;if(!id)return;if(!canDel(P[id]))return toast('You can delete only your own drafts');if((ADM||CB)&&!confirm('Delete '+nm(P[id])+' from the shared database? This also removes their links.'))return;delete P[id];for(const p of Object.values(P)){p.par=p.par.filter(x=>x!=id);p.sp=p.sp.filter(x=>x!=id)}save();select(null)}
 
 /* ---------- CSV ---------- */
 const HD=['id','first_name','last_name','gender','birth_date','death_date','parent_ids','spouse_ids','place','notes'];
@@ -298,54 +299,63 @@ function setData(n){try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch
 const SB='https://llunlcxpyqpbylsafrqp.supabase.co',SK='sb_publishable__E0tdZNkY-wkoTzcaB6ZQg_bcpg5hXm';/* publishable key: safe to be public, row rules in the database protect the data */
 async function sbGet(q){const out=[];for(let off=0;;off+=1000){const r=await fetch(`${SB}/rest/v1/${q}&limit=1000&offset=${off}`,{headers:await authHeaders()});
  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,100));const a=await r.json();out.push(...a);if(a.length<1000)break}return out}
-function fromRemote(ps,pl,sl){const n={};ps.forEach(r=>n[r.id]={id:r.id,first:r.first_name||'',last:r.last_name||'',gender:r.gender||'',birth:r.birth_date||'',death:r.death_date||'',place:r.place||'',notes:r.notes||'',par:[],sp:[]});
- pl.forEach(r=>{if(n[r.child_id]&&n[r.parent_id])n[r.child_id].par.push(r.parent_id)});sl.forEach(r=>{const a=n[r.a_id],b=n[r.b_id];if(a&&b)link(a,b)});return clean(n)}
+function fromRemote(ps,pl,sl,dr){LS={};const mk=(r,st)=>({id:r.id,first:r.first_name||'',last:r.last_name||'',gender:r.gender||'',birth:r.birth_date||'',death:r.death_date||'',place:r.place||'',notes:r.notes||'',par:[],sp:[],...(st?{st}:{})}),n={};
+ ps.forEach(r=>n[r.id]=mk(r));if(dr)dr.ps.forEach(r=>n[r.id]=mk(r,r.status));
+ pl.forEach(r=>{if(n[r.child_id]&&n[r.parent_id])n[r.child_id].par.push(r.parent_id)});sl.forEach(r=>{const a=n[r.a_id],b=n[r.b_id];if(a&&b)link(a,b)});
+ if(dr){dr.pl.forEach(r=>{if(n[r.child_id]&&n[r.parent_id]){n[r.child_id].par.push(r.parent_id);LS[r.child_id+'|'+r.parent_id]=r.status}});
+  dr.sl.forEach(r=>{const a=n[r.a_id],b=n[r.b_id];if(a&&b){link(a,b);LS[ord(r.a_id,r.b_id).join('|')]=r.status}})}
+ return clean(n)}
 const setSt=t=>{const h=$('#hs');if(h)h.textContent=t};
 let syncing=false,RO=false;
 function setRO(v){RO=v;document.body.classList.toggle('ro',v);try{localStorage.setItem(KEY+'-ro',v?'1':'')}catch(e){}}
-async function syncDown(manual){if(syncing)return;if(ADM&&BASE&&isDirty()){if(!manual||!confirm('You have unsaved changes. Reload from the database and discard them?'))return}syncing=true;setSt('Syncing…');
- try{const[ps,pl,sl]=await Promise.all([sbGet('persons?select=id,first_name,last_name,gender,birth_date,death_date,place,notes&status=eq.approved&order=id'),
+async function syncDown(manual){if(syncing)return;if((ADM||CB)&&BASE&&isDirty()){if(!manual||!confirm('You have unsaved changes. Reload from the database and discard them?'))return}syncing=true;setSt('Syncing…');
+ try{if(SES&&!ME)await loadMe();const[ps,pl,sl]=await Promise.all([sbGet('persons?select=id,first_name,last_name,gender,birth_date,death_date,place,notes&status=eq.approved&order=id'),
    sbGet('parent_links?select=child_id,parent_id&status=eq.approved&order=child_id,parent_id'),sbGet('spouse_links?select=a_id,b_id&status=eq.approved&order=a_id,b_id')]);
   if(!ps.length)throw new Error('no people returned - check access rules');
+  CB=!!(SES&&ME&&ME.trust_id&&ME.role=='contributor');let dr=null;
+  if(CB){const[a,b,c]=await Promise.all([sbGet('persons?select=id,first_name,last_name,gender,birth_date,death_date,place,notes,status&status=in.(draft,pending,rejected)&order=id'),sbGet('parent_links?select=child_id,parent_id,status&status=in.(draft,pending,rejected)&order=child_id,parent_id'),sbGet('spouse_links?select=a_id,b_id,status&status=in.(draft,pending,rejected)&order=a_id,b_id')]);dr={ps:a,pl:b,sl:c}}
   try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch(e){}
-  P=fromRemote(ps,pl,sl);setRO(!ADM);BASE=snap();setTimeout(showBar,0);sel=null;foc=Object.keys(P)[0]||null;save();$('#sheet').hidden=true;draw();needFit=1;if(!$('#tree').hidden){fit();needFit=0}renderData();
+  P=fromRemote(ps,pl,sl,dr);setRO(!(ADM||CB));BASE=snap();setTimeout(showBar,0);sel=null;foc=Object.keys(P)[0]||null;save();$('#sheet').hidden=true;draw();needFit=1;if(!$('#tree').hidden){fit();needFit=0}renderData();
   const t=new Date().toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});try{localStorage.setItem('ra-last-sync',t)}catch(e){}
   setSt('Synced '+t+' · '+Object.keys(P).length+' people');if(manual)toast('Loaded '+Object.keys(P).length+' people from the database')}
  catch(e){let t='';try{t=localStorage.getItem('ra-last-sync')||''}catch(x){}setSt(t?'Offline · saved copy from '+t:'Offline · saved data');if(manual)toast('Could not sync: '+e.message)}
  finally{syncing=false}}
 /* ---------- admin editing: every change made in the app is written to the shared database ---------- */
-let ADM=false,BASE=null,pushT=0,pushing=false,again=false;
+let ADM=false,CB=false,LS={},BASE=null,pushT=0,pushing=false,again=false;
 const snap=()=>JSON.parse(JSON.stringify(P)),ord=(a,b)=>a<b?[a,b]:[b,a];
 const pairsP=o=>{const s=new Set();for(const i in o)for(const q of o[i].par)if(o[q])s.add(i+'|'+q);return s};
 const pairsS=o=>{const s=new Set();for(const i in o)for(const q of o[i].sp)if(o[q]){const[a,b]=ord(i,q);s.add(a+'|'+b)}return s};
+const EDT=()=>ADM||CB,isDr=p=>!!p&&(p.st=='draft'||p.st=='rejected'),canEdit=p=>ADM||(CB&&isDr(p)),canDel=p=>ADM||(CB&&!!p&&p.st=='draft');
+const lkey=(k,a,b)=>k=='par'?a+'|'+b:k=='chi'?b+'|'+a:ord(a,b).join('|');
+const canUnl=(k,a,b)=>ADM||(CB&&['draft','rejected'].includes(LS[lkey(k,a,b)]));
 const prow=p=>({first_name:p.first||'',last_name:p.last||'',gender:p.gender||'',birth_date:p.birth||'',death_date:p.death||'',place:p.place||'',notes:p.notes||''});
-function schedPush(){if(!ADM||!BASE)return;showBar()}
+function schedPush(){if(!(ADM||CB)||!BASE)return;showBar()}
 function diffSum(){if(!BASE)return null;const B=BASE,N=P;let pe=0,pa=0,pd=0,la=0,ld=0;
  for(const i in N){if(!B[i])pa++;else if(JSON.stringify(prow(N[i]))!=JSON.stringify(prow(B[i])))pe++}for(const i in B)if(!N[i])pd++;
  const pb=pairsP(B),pn=pairsP(N),sb=pairsS(B),sn=pairsS(N),both=k=>k.split('|').every(x=>N[x]);
  for(const k of pn)if(!pb.has(k))la++;for(const k of sn)if(!sb.has(k))la++;for(const k of pb)if(!pn.has(k)&&both(k))ld++;for(const k of sb)if(!sn.has(k)&&both(k))ld++;
  return{pe,pa,pd,la,ld,n:pe+pa+pd+la+ld}}
 const isDirty=()=>{const d=diffSum();return !!d&&d.n>0};
-function showBar(){const b=$('#savebar');if(!b)return;const d=ADM?diffSum():null,n=d?d.n:0;b.hidden=!n;document.body.classList.toggle('dirty',!!n);
+function showBar(){const b=$('#savebar');if(!b)return;const d=(ADM||CB)?diffSum():null,n=d?d.n:0;b.hidden=!n;document.body.classList.toggle('dirty',!!n);
  if(n)$('#savemsg').textContent='Unsaved changes: '+[[d.pe,'person edited'],[d.pa,'person added'],[d.pd,'person deleted'],[d.la,'link added'],[d.ld,'link removed']].filter(x=>x[0]).map(x=>x[0]+' '+x[1]).join(', ')}
 function discardChanges(){if(!BASE||!confirm('Discard all unsaved changes?'))return;P=JSON.parse(JSON.stringify(BASE));sel=null;try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}$('#sheet').hidden=true;draw();renderData();showBar();toast('Changes discarded')}
 async function dbq(method,path,body){const r=await fetch(`${SB}/rest/v1/${path}`,{method,headers:{...(await authHeaders()),'Content-Type':'application/json',Prefer:'return=minimal'},body:body?JSON.stringify(body):undefined});
  if(!r.ok){let m='';try{m=(await r.json()).message||''}catch(e){}throw new Error(m||('HTTP '+r.status))}}
 async function pushChanges(){if(pushing){again=true;return}pushing=true;
- try{const B=BASE,N=snap(),tr=ME&&ME.trust_id;if(!B)return;if(!tr)throw new Error('your account is not linked to a trust');
+ try{const B=BASE,N=snap(),tr=ME&&ME.trust_id,SF=ADM?'approved':'draft';if(!B)return;if(!tr)throw new Error('your account is not linked to a trust');
   const pb=pairsP(B),pn=pairsP(N),sb=pairsS(B),sn=pairsS(N),both=k=>k.split('|').every(x=>N[x]);
-  for(const k of [...pb].filter(k=>!pn.has(k)&&both(k))){const[c,p]=k.split('|');await dbq('DELETE',`parent_links?child_id=eq.${c}&parent_id=eq.${p}`)}
-  for(const k of [...sb].filter(k=>!sn.has(k)&&both(k))){const[a,b]=k.split('|');await dbq('DELETE',`spouse_links?a_id=eq.${a}&b_id=eq.${b}`)}
-  const gone=Object.keys(B).filter(i=>!N[i]);if(gone.length)await dbq('DELETE',`persons?id=in.(${gone.join(',')})`);
-  const nw=Object.keys(N).filter(i=>!B[i]);if(nw.length)await dbq('POST','persons',nw.map(i=>({id:i,trust_id:tr,status:'approved',...prow(N[i])})));
-  for(const i of Object.keys(N)){if(!B[i])continue;const a=prow(N[i]),b=prow(B[i]),ch={};for(const k in a)if(a[k]!==b[k])ch[k]=a[k];if(Object.keys(ch).length)await dbq('PATCH',`persons?id=eq.${i}`,ch)}
+  for(const k of [...pb].filter(k=>!pn.has(k)&&both(k)&&(ADM||['draft','rejected'].includes(LS[k])))){const[c,p]=k.split('|');await dbq('DELETE',`parent_links?child_id=eq.${c}&parent_id=eq.${p}`)}
+  for(const k of [...sb].filter(k=>!sn.has(k)&&both(k)&&(ADM||['draft','rejected'].includes(LS[k])))){const[a,b]=k.split('|');await dbq('DELETE',`spouse_links?a_id=eq.${a}&b_id=eq.${b}`)}
+  const gone=Object.keys(B).filter(i=>!N[i]&&(ADM||B[i].st=='draft'));if(gone.length)await dbq('DELETE',`persons?id=in.(${gone.join(',')})`);
+  const nw=Object.keys(N).filter(i=>!B[i]);if(nw.length)await dbq('POST','persons',nw.map(i=>({id:i,trust_id:tr,status:SF,...prow(N[i])})));
+  for(const i of Object.keys(N)){if(!B[i])continue;if(CB&&!isDr(N[i]))continue;const a=prow(N[i]),b=prow(B[i]),ch={};for(const k in a)if(a[k]!==b[k])ch[k]=a[k];if(Object.keys(ch).length){if(CB&&N[i].st=='rejected'){ch.status='draft';N[i].st='draft'}await dbq('PATCH',`persons?id=eq.${i}`,ch)}}
   const aP=[...pn].filter(k=>!pb.has(k)),aS=[...sn].filter(k=>!sb.has(k));
-  if(aP.length)await dbq('POST','parent_links',aP.map(k=>{const[c,p]=k.split('|');return{child_id:c,parent_id:p,status:'approved'}}));
-  if(aS.length)await dbq('POST','spouse_links',aS.map(k=>{const[a,b]=k.split('|');return{a_id:a,b_id:b,status:'approved'}}));
-  BASE=N;showBar();setSt('Saved ✓ '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}
+  if(aP.length)await dbq('POST','parent_links',aP.map(k=>{const[c,p]=k.split('|');return{child_id:c,parent_id:p,status:SF}}));
+  if(aS.length)await dbq('POST','spouse_links',aS.map(k=>{const[a,b]=k.split('|');return{a_id:a,b_id:b,status:SF}}));
+  if(!ADM){aP.forEach(k=>{LS[k]='draft'});aS.forEach(k=>{LS[k]='draft'})}BASE=N;showBar();setSt('Saved ✓ '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))}
  catch(e){const m='Not saved: '+(/Failed to fetch/.test(e.message)?'no internet connection':e.message);BASE=null;pushing=false;await syncDown(false);toast(m)}
  finally{pushing=false;if(again){again=false;schedPush()}}}
-function unlink(spec){const[k,id]=spec.split(':'),c=P[sel];if(!ADM||!c||!P[id])return;if(!confirm('Remove the link between '+nm(c)+' and '+nm(P[id])+'? (Nobody is deleted.)'))return;
+function unlink(spec){const[k,id]=spec.split(':'),c=P[sel];if(!(ADM||CB)||!c||!P[id])return;if(!canUnl(k,c.id,id))return toast('Only your own draft links can be removed');if(!confirm('Remove the link between '+nm(c)+' and '+nm(P[id])+'? (Nobody is deleted.)'))return;
  if(k=='par')c.par=c.par.filter(x=>x!=id);else if(k=='sp'){c.sp=c.sp.filter(x=>x!=id);P[id].sp=P[id].sp.filter(x=>x!=c.id)}else P[id].par=P[id].par.filter(x=>x!=c.id);
  save();draw();openSheet()}
 /* ---------- login (Supabase Auth: email + password) ---------- */
@@ -360,8 +370,8 @@ async function authHeaders(){const h={apikey:SK};
  if(SES)h.Authorization='Bearer '+SES.access_token;return h}
 async function loadMe(){ME=null;if(!SES)return;try{const r=await fetch(`${SB}/rest/v1/profiles?select=role,trust_id,full_name&id=eq.${SES.uid}`,{headers:await authHeaders()});if(r.ok){const a=await r.json();ME=a[0]||{role:'viewer',trust_id:null}}}catch(e){}}
 const myRole=()=>SES&&ME&&ME.trust_id?ME.role:(SES?'viewer':'guest');
-function applyRole(){const r=myRole();ADM=!!SES&&(r=='admin'||r=='developer');setRO(!ADM);const rr=r,c=r=='contributor'||r=='admin'||r=='developer',a=r=='admin'||r=='developer',B=document.body.classList;B.toggle('in',!!SES);B.toggle('r-c',c);B.toggle('r-a',a);{const td=$('#tabData');if(td){td.hidden=!c;if(!c&&!$('#data').hidden)show('tree')}}showBar();
- const m=$('#toolsmsg');if(m)m.textContent={guest:'Guest: you can browse the tree and the relation finder. Sign in to take part.',viewer:'Viewer: you can browse the tree and the relation finder. Editing needs an invite from an admin.',contributor:'Contributor: you will add your own branch here (coming in task 4.2).',admin:'Admin: you can edit people and links directly. Tap a person, then change the details or use the ✕ beside a link. Changes save to the shared database. Invites and the review queue come next.',developer:'Developer: same tools as an admin.'}[r]||''}
+function applyRole(){const r=myRole();ADM=!!SES&&(r=='admin'||r=='developer');CB=!!SES&&r=='contributor';setRO(!(ADM||CB));document.body.classList.toggle('cb',CB);const rr=r,c=r=='contributor'||r=='admin'||r=='developer',a=r=='admin'||r=='developer',B=document.body.classList;B.toggle('in',!!SES);B.toggle('r-c',c);B.toggle('r-a',a);{const td=$('#tabData');if(td){td.hidden=!c;if(!c&&!$('#data').hidden)show('tree')}}showBar();
+ const m=$('#toolsmsg');if(m)m.textContent={guest:'Guest: you can browse the tree and the relation finder. Sign in to take part.',viewer:'Viewer: you can browse the tree and the relation finder. Editing needs an invite from an admin.',contributor:'Contributor: find your relative, then tap Add my branch. Everything you add is a draft that only you and the admins can see until an admin approves it.',admin:'Admin: you can edit people and links directly. Tap a person, then change the details or use the ✕ beside a link. Changes save to the shared database. Invites and the review queue come next.',developer:'Developer: same tools as an admin.'}[r]||''}
 async function selfTest(){const o=$('#chkout');if(!SES){o.textContent='Sign in first.';return}o.textContent='Checking…';const L=[],H=await authHeaders(),J={...H,'Content-Type':'application/json',Prefer:'return=representation'},r=myRole(),adm=r=='admin'||r=='developer',ok=(t,p)=>L.push((p?'✅ ':'⚠️ ')+t);
  try{let x=await fetch(`${SB}/rest/v1/persons?select=id&status=eq.approved&limit=1`,{headers:H});ok('Can read the approved tree',x.ok);
   x=await fetch(`${SB}/rest/v1/persons`,{method:'POST',headers:J,body:JSON.stringify({trust_id:ME&&ME.trust_id||undefined,first_name:'__access_test__',status:'draft'})});const can=x.ok;let id=null;if(can){try{id=(await x.json())[0].id}catch(e){}}
@@ -380,7 +390,7 @@ async function doLogin(){const em=$('#lem').value.trim(),pw=$('#lpw').value,msg=
   if(!s){msg('Account created, but email confirmation is still switched on in the database settings. Ask the admin to turn it off, then sign in.');return}
   saveSes(s);$('#login').hidden=true;$('#lpw').value='';ME=null;renderAcct();toast('Signed in as '+s.email);await redeemPending();await loadMe();renderAcct();syncDown(false)}
  catch(e){msg(/Failed to fetch|NetworkError/i.test(e.message)?'No internet connection.':e.message)}finally{$('#lgo').disabled=false}}
-async function doLogout(){if(ADM&&BASE&&isDirty()&&!confirm('You have unsaved changes that will be lost. Sign out anyway?'))return;try{await authCall('logout',{},SES&&SES.access_token)}catch(e){}saveSes(null);ME=null;renderAcct();toast('Signed out');syncDown(false)}
+async function doLogout(){if((ADM||CB)&&BASE&&isDirty()&&!confirm('You have unsaved changes that will be lost. Sign out anyway?'))return;try{await authCall('logout',{},SES&&SES.access_token)}catch(e){}saveSes(null);ME=null;renderAcct();toast('Signed out');syncDown(false)}
 /* ---------- invites: admin creates a link, a new person opens it, signs up and gets the role ---------- */
 const lsg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lss=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
 let lastInv=null;
@@ -559,7 +569,7 @@ document.addEventListener('click',e=>{const ap=e.target.closest('[data-ap]');if(
  if(t.dataset.go){show('tree');if(mode!='full')focusOn(t.dataset.go);else{select(t.dataset.go);centerOn(t.dataset.go)}return}
  const a=t.dataset.act,r=svg.getBoundingClientRect();
  if(a=='chk'){selfTest();return}
- if(a=='mybranch'){openAnchor();return}if(a=='anclose'){$('#anchor').hidden=true;return}if(a=='anyes'){setAnchor(t.dataset.id);return}
+ if(a=='mybranch'){openAnchor();return}if(a=='mybr2'){if(!ANC||!P[ANC]){toast('First tap Find my relative');return}show('tree');focusOn(ANC);select(ANC);toast('Tap + Parent, + Spouse or + Child to add your family. Everything you add is a draft until an admin approves it.');return}if(a=='anclose'){$('#anchor').hidden=true;return}if(a=='anyes'){setAnchor(t.dataset.id);return}
  if(a=='anshow'){$('#anchor').hidden=true;show('tree');focusOn(t.dataset.id);return}if(a=='anagain'){$('#anpick').hidden=true;anSearch();$('#anq').focus();return}
  if(a=='savechg'){pushChanges();return}if(a=='discard'){discardChanges();return}
  if(a=='login'){if(SES){if(myRole()=='viewer'){if(confirm('Signed in as '+SES.email+'. Sign out?'))doLogout()}else show('data')}else{lmode='in';setLM();$('#login').hidden=false}return}
@@ -576,5 +586,5 @@ document.addEventListener('click',e=>{const ap=e.target.closest('[data-ap]');if(
  else if(a=='swap'){const v=$('#ra').value;$('#ra').value=$('#rb').value;$('#rb').value=v;syA();syB();renderRel()}
  else if(a=='undo'){try{const b=JSON.parse(localStorage.getItem(KEY+'-bak'));if(b)setData(b);else toast('No backup yet')}catch(x){toast('No backup yet')}}});
 try{P=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){P={}}
-foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);startInvite();$('#anq').oninput=anSearch;window.addEventListener('beforeunload',e=>{if(ADM&&BASE&&isDirty()){e.preventDefault();e.returnValue=''}});$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
+foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);startInvite();$('#anq').oninput=anSearch;window.addEventListener('beforeunload',e=>{if((ADM||CB)&&BASE&&isDirty()){e.preventDefault();e.returnValue=''}});$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
 </script></body></html>
