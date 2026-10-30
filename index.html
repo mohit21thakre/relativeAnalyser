@@ -83,7 +83,7 @@ body.cb [data-act=new]{display:none!important}.n.dr circle{stroke-dasharray:4 3}
 <nav><button data-tab="tree" class="on">Tree</button><button data-tab="people">People</button><button data-tab="rel">Relation</button><button data-tab="data" id="tabData">Data</button></nav>
 <main>
 <section id="tree"><svg id="svg"><g id="vp"></g></svg>
-<div id="empty" hidden><div style="font-size:42px">🌳</div><div>No relatives yet.<br>Add the first person, or import a file in the Data tab.</div><button class="pri" data-act="new">Add first person</button></div>
+<div id="empty" hidden><div style="font-size:42px">🌳</div><div id="emptymsg">Loading the family tree…</div><button class="pri" data-act="sync">Try again</button></div>
 <div class="tb"><div class="pk" style="flex:1"><input id="sf" placeholder="Search a person…" autocomplete="off"><div class="pl" id="lf" hidden></div></div><button id="mb" data-act="mode">Full tree</button></div>
 <div id="pb" class="card pb" hidden></div>
 <div id="rotbar" class="rb" hidden><button data-act="rl" title="Rotate left">⟲</button><input id="rot" type="range" min="-180" max="180" step="1" value="0"><button data-act="rr" title="Rotate right">⟳</button><button data-act="r0">0°</button><button data-act="snd" id="sndb">🔊</button></div>
@@ -103,11 +103,11 @@ body.cb [data-act=new]{display:none!important}.n.dr circle{stroke-dasharray:4 3}
 <div class="row" style="margin-top:8px"><select id="ivr"><option value="contributor">Contributor</option><option value="viewer">Viewer</option><option value="admin">Admin (full access)</option></select><select id="ivd"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select><select id="ivu"><option value="1">1 person</option><option value="5">5 people</option><option value="20">20 people</option></select></div>
 <div class="acts"><button class="pri" data-act="mkinv">Create invite link</button></div><div id="ivout"></div><div class="lbl">RECENT INVITES</div><div id="ivlist" class="mut">…</div></div>
 <p id="stat" style="margin:4px 0 10px"></p>
-<div class="acts"><button class="pri" data-act="sync">⟳ Sync from database</button><button class="ra" data-act="dl">Download CSV</button><button class="ra" data-act="cp">Copy CSV</button><label class="btn eo">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
-<textarea id="csv" class="ad" readonly></textarea>
+<div class="acts"><button class="pri" data-act="sync">⟳ Sync from database</button><button class="ra" data-act="dl">Download CSV</button><label class="btn eo">Import file<input id="file" type="file" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"></label><button data-act="undo">Restore backup</button></div>
+
 <div class="lbl eo" style="margin-top:14px">Can't pick a file? Paste CSV or .ftt text here:</div><textarea id="paste" class="eo" style="height:90px" placeholder="Paste here, then tap Import pasted text"></textarea>
 <div class="acts"><button data-act="ip">Import pasted text</button></div>
-<p class="mut ad" style="font-size:13px">One row per person. <b>parent_ids</b> and <b>spouse_ids</b> hold ids of other rows, separated by “;”. That flat format imports easily into spreadsheets, databases or other family-tree apps. Importing replaces current data (a backup is kept). Data is also kept in this browser, so export regularly.</p>
+<p class="mut ad" style="font-size:13px">The CSV has one row per person. <b>parent_ids</b> and <b>spouse_ids</b> hold ids of other rows, separated by “;”. Download it regularly as a backup.</p>
 </section>
 </main>
 <div id="sheet" hidden></div>
@@ -117,7 +117,7 @@ body.cb [data-act=new]{display:none!important}.n.dr circle{stroke-dasharray:4 3}
 <div class="lbl">EMAIL</div><input id="lem" type="email" autocomplete="email" placeholder="you@example.com">
 <div class="lbl">PASSWORD</div><input id="lpw" type="password" autocomplete="current-password" placeholder="At least 8 characters">
 <div id="lmsg" class="mut" style="min-height:20px;margin:8px 0;font-size:13px"></div>
-<div class="acts"><button class="pri" data-act="lgo" id="lgo">Sign in</button><button data-act="lmode" id="lmode">New here? Create account</button><button data-act="lclose">Cancel</button></div></div></div>
+<div class="acts"><button class="pri" data-act="lgo" id="lgo">Sign in</button><button data-act="lmode" id="lmode">New here? Create account</button><button data-act="lclose">Cancel</button></div><div style="margin-top:6px"><button data-act="forgot" id="lforgot" style="border:0;background:none;color:var(--acc);padding:4px 0;text-decoration:underline">Forgot password?</button></div></div></div>
 <div id="savebar" class="card" hidden style="position:fixed;left:10px;right:10px;bottom:10px;z-index:25;margin:0;padding:10px 12px;display:flex;gap:8px;align-items:center"><span id="savemsg" style="flex:1;font-size:13px"></span><button class="pri" data-act="savechg">Save</button><button data-act="discard">Discard</button></div>
 <div id="anchor" hidden style="position:fixed;inset:0;z-index:28;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center">
 <div class="card" style="width:100%;max-width:520px;margin:0;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0"><h2>Find your relative</h2>
@@ -125,15 +125,22 @@ body.cb [data-act=new]{display:none!important}.n.dr circle{stroke-dasharray:4 3}
 <input id="anq" placeholder="Search by name, village or parent's name…" autocomplete="off">
 <div id="anlist"></div><div id="anpick" hidden></div>
 <div class="acts"><button data-act="anclose">Close</button></div></div></div>
+<div id="pwm" hidden style="position:fixed;inset:0;z-index:31;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px"><div class="card" style="width:100%;max-width:380px;margin:0"><h2 id="pwt">Set a new password</h2>
+<div class="lbl">NEW PASSWORD</div><input id="pw1" type="password" autocomplete="new-password" placeholder="At least 8 characters"><div class="lbl">REPEAT PASSWORD</div><input id="pw2" type="password" autocomplete="new-password">
+<div id="pwmsg" class="mut" style="min-height:20px;margin:8px 0;font-size:13px"></div><div class="acts"><button class="pri" data-act="pwsave" id="pwsave">Save password</button><button data-act="pwclose">Cancel</button></div></div></div>
+<div id="accm" hidden style="position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px"><div class="card" style="width:100%;max-width:380px;margin:0"><h2>Account</h2><div id="accinfo"></div><div class="acts"><button data-act="pwopen">Change password</button><button data-act="lout">Sign out</button><button data-act="accclose">Close</button></div></div></div>
 <div id="toast" hidden></div>
 <script>
 const $=s=>document.querySelector(s),KEY='relative-analyser-v1',W=124,NH=46,H=130,GS=14,GU=34;
 let P={},sel=null,pos={},view={x:0,y:0,k:1,r:0},needFit=1,tt,mode='focus',foc=null,pedge={},rp=null,lastRel=null,snd=true;
 const uid=()=>((ADM||CB)&&window.crypto&&crypto.randomUUID)?crypto.randomUUID():'P'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const nm=p=>((p.first||'')+' '+(p.last||'')).trim()||'(unnamed)';
+/* males keep the family surname: a man with no surname entered inherits his father's; women keep only their own (it may change after marriage) */
+const effLast=(p,d=0)=>{if(!p)return'';if(p.last)return p.last;if(p.gender!='M'||d>30)return'';for(const q of p.par){const f=P[q];if(f&&f.gender=='M'){const l=effLast(f,d+1);if(l)return l}}return''};
+const nm=p=>((p.first||'')+' '+(p.last||(p.first?effLast(p):''))).trim()||'(unnamed)';
+const shortNm=(p,m)=>{const t=nm(p);if(t.length<=m)return t;const l=p.last||effLast(p),s=l?(p.first||'')+' '+l[0]+'.':(p.first||'');return s.length<=m?s:s.slice(0,m-1)+'…'};
 const dates=p=>p.birth&&p.death?p.birth+' – '+p.death:p.birth?'b. '+p.birth:p.death?'d. '+p.death:'';
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}try{schedPush()}catch(e){}};
+const save=()=>{try{schedPush()}catch(e){}};
 const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)};
 function add(o){const p={id:uid(),first:'',last:'',gender:'',birth:'',death:'',place:'',notes:'',par:[],sp:[],...o};if(CB&&!p.st)p.st='draft';P[p.id]=p;return p}
 function link(a,b){if(!a.sp.includes(b.id))a.sp.push(b.id);if(!b.sp.includes(a.id))b.sp.push(a.id)}
@@ -167,7 +174,7 @@ function order(rs,cl){if(rs.length<2)return rs;const by={},ad={};rs.forEach(r=>{
  rs.forEach(r=>{if(!seen[r.ti])seq.push(r)});return seq}
 /* each generation ring (dotted) and the people on it share one colour, so a generation is easy to follow around the chart */
 const RP=['#e76f51','#2a9d8f','#e9a820','#6a4c93','#1982c4','#7cb518','#ff595e','#ff924c'];let GC={};
-const fnode=(id,x,y)=>{const p=P[id],t=nm(p),d=dates(p);return `<g class="n ${p.gender} ${p.st&&p.st!='approved'?'dr':''} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><g class="u" transform="rotate(${-view.r})"><circle r="17"${LC[id]||GC[id]?` style="stroke:${LC[id]||GC[id]};stroke-width:${LC[id]?3.5:2.4}"`:''}/><text class="i" y="5">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="32">${esc(t.length>13?t.slice(0,12)+'…':t)}</text>${d?`<text class="d" y="44">${esc(d)}</text>`:''}</g></g>`};
+const fnode=(id,x,y)=>{const p=P[id],t=nm(p),d=dates(p);return `<g class="n ${p.gender} ${p.st&&p.st!='approved'?'dr':''} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><g class="u" transform="rotate(${-view.r})"><circle r="17"${LC[id]||GC[id]?` style="stroke:${LC[id]||GC[id]};stroke-width:${LC[id]?3.5:2.4}"`:''}/><text class="i" y="5">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="32">${esc(shortNm(p,13))}</text>${d?`<text class="d" y="44">${esc(d)}</text>`:''}</g></g>`};
 function fan(rts,cl){const single=rts.length==1,base=single?rts[0].g:-1,all=[],T=2*Math.PI,pq={};const E=[];let ex='',rg='',lk='',nh='',xl='';
  const dem=n=>{n.d=n.g-base;all.push(n);n.k.forEach(dem);const S=n.k.reduce((a,x)=>a+x.w,0);n.w=n.d?Math.max(SLOT*n.u.length/(n.d*RS),S):S||1},
  span=(n,a0,a1)=>{n.a0=a0;n.a1=a1;const S=n.k.reduce((a,x)=>a+x.w,0);let a=a0;n.k.forEach(x=>{const e=a+(a1-a0)*x.w/S;span(x,a,e);a=e})};
@@ -207,7 +214,7 @@ function drawFocus(){const c=P[foc],used={[foc]:1},it=[],R1=125,R2=235,rad=d=>d*
  pos={};for(const i in Q)pos[i]={x:Q[i].x-W/2,y:Q[i].y-NH/2};
  let s=`<circle class="ring" r="${R1}"/><circle class="ring" r="${R2}"/>`,n='';
  it.forEach(o=>{const a=Q[o.from]||Q[foc],b=Q[o.id];s+=`<path class="e ${o.dash||''}" d="M${a.x} ${a.y}L${b.x} ${b.y}"/>`});
- const node=(id,role)=>{const p=P[id],t=nm(p),k=id==foc;return `<g class="n ${p.gender} ${p.st&&p.st!='approved'?'dr':''} ${k?'ctr':''} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${Q[id].x},${Q[id].y})"><circle r="${k?28:21}"/><text class="i" y="${k?7:5}">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="${k?46:36}">${esc(t.length>16?t.slice(0,15)+'…':t)}</text><text class="${k?'d':'r'}" y="${k?59:48}">${esc(k?dates(p):role)}</text></g>`};
+ const node=(id,role)=>{const p=P[id],t=nm(p),k=id==foc;return `<g class="n ${p.gender} ${p.st&&p.st!='approved'?'dr':''} ${k?'ctr':''} ${id==sel?'sel':''}" data-id="${esc(id)}" transform="translate(${Q[id].x},${Q[id].y})"><circle r="${k?28:21}"/><text class="i" y="${k?7:5}">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="${k?46:36}">${esc(shortNm(p,16))}</text><text class="${k?'d':'r'}" y="${k?59:48}">${esc(k?dates(p):role)}</text></g>`};
  for(const i in Q)n+=node(i,(it.find(o=>o.id==i)||{}).role);
  if(!it.length)n+='<text y="100" style="text-anchor:middle;fill:var(--mut);font-size:12px">No relatives linked yet — tap the person to add some</text>';
  $('#vp').innerHTML=s+n}
@@ -219,7 +226,7 @@ function drawPath(){const A=rp.A,st=rp.st,ids=[A,...st.map(z=>z.n)],X=96,Y=112,p
  pos={};ids.forEach((id,i)=>pos[id]={x:pt[i].x-W/2,y:pt[i].y-NH/2});let s='',n='';
  st.forEach((z,i)=>{const a=pt[i],b=pt[i+1];s+=`<path class="e ${z.t=='s'?'s':''}" d="M${a.x} ${a.y}L${b.x} ${b.y}"/><text class="el" x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-5}">${LINK[z.t]}</text>`});
  ids.forEach((id,i)=>{const p=P[id],t=nm(p),k=i==0||i==ids.length-1,c=i==0?'Person A':k?'Person B':role(st[i-1].t,p.gender);
-  n+=`<g class="n ${p.gender} ${k?'ctr':''}" data-id="${esc(id)}" transform="translate(${pt[i].x},${pt[i].y})"><circle r="${k?26:21}"/><text class="i" y="5">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="${k?43:36}">${esc(t.length>14?t.slice(0,13)+'…':t)}</text><text class="r" y="${k?56:48}">${esc(c.charAt(0).toUpperCase()+c.slice(1))}</text></g>`});
+  n+=`<g class="n ${p.gender} ${k?'ctr':''}" data-id="${esc(id)}" transform="translate(${pt[i].x},${pt[i].y})"><circle r="${k?26:21}"/><text class="i" y="5">${esc((p.first||p.last||'?')[0].toUpperCase())}</text><text y="${k?43:36}">${esc(shortNm(p,14))}</text><text class="r" y="${k?56:48}">${esc(c.charAt(0).toUpperCase()+c.slice(1))}</text></g>`});
  $('#vp').innerHTML=s+n;$('#pb').innerHTML=`<div style="font-size:13.5px">${esc(rp.sent)}</div><div class="acts" style="margin:6px 0 0"><button data-act="pclose">Show ${esc(nm(P[A]))}'s network</button></div>`}
 function drawFull(){const{roots,cl}=build();pos={};LC={};GC={};cl.forEach((z,i)=>{z.col=XPAL[i%XPAL.length];LC[z[0]]=z.col});if(!roots.length){$('#vp').innerHTML='';return}
  const gr={};roots.forEach(r=>(gr[r.c]=gr[r.c]||[]).push(r));
@@ -254,16 +261,16 @@ function select(id){sel=id&&P[id]?id:null;draw();sel?openSheet():($('#sheet').hi
 const chips=(ids,k,p)=>ids.filter(i=>P[i]).map(i=>`<span class="chip"><span data-go="${esc(i)}">${esc(nm(P[i]))}</span>${k&&p&&canUnl(k,p.id,i)?` <b data-un="${k}:${esc(i)}" style="color:#b3402e;cursor:pointer">✕</b>`:''}</span>`).join('')||'<span class="mut">–</span>';
 function openSheet(){const p=P[sel],sh=$('#sheet'),kids=Object.values(P).filter(c=>c.par.includes(p.id)).map(c=>c.id);
  const opts=Object.values(P).filter(o=>o.id!=p.id).sort((a,b)=>nm(a).localeCompare(nm(b))).map(o=>`<option value="${esc(o.id)}">${esc(nm(o))}${o.birth?' ('+esc(o.birth)+')':''}</option>`).join('');
- sh.innerHTML=`${p.st&&p.st!='approved'?`<div class="mut" style="margin-bottom:6px">✎ ${p.st=='pending'?'Waiting for admin approval':'Draft — only you and the admins can see it until it is approved'}</div>`:''}<div class="row"><input data-f="first" placeholder="First name" value="${esc(p.first)}"><input data-f="last" placeholder="Surname" value="${esc(p.last)}"></div>
- <div class="row"><select data-f="gender"><option value="">Gender: –</option><option value="M"${p.gender=='M'?' selected':''}>Male</option><option value="F"${p.gender=='F'?' selected':''}>Female</option></select><input data-f="birth" placeholder="Born (YYYY or YYYY-MM-DD)" value="${esc(p.birth)}"><input data-f="death" placeholder="Died" value="${esc(p.death)}"></div>
+ sh.innerHTML=`${p.st&&p.st!='approved'?`<div class="mut" style="margin-bottom:6px">✎ ${p.st=='pending'?'Waiting for admin approval':'Draft — only you and the admins can see it until it is approved'}</div>`:''}<div class="row"><input data-f="first" placeholder="First name" value="${esc(p.first)}"><input data-f="last" placeholder="${p.last?'Surname':(effLast(p)?'Surname ('+esc(effLast(p))+' from father)':'Surname')}" value="${esc(p.last)}"></div>
+ <div id="dupbox"></div><div class="row"><select data-f="gender"><option value="">Gender: –</option><option value="M"${p.gender=='M'?' selected':''}>Male</option><option value="F"${p.gender=='F'?' selected':''}>Female</option></select><input data-f="birth" placeholder="Born (YYYY or YYYY-MM-DD)" value="${esc(p.birth)}"><input data-f="death" placeholder="Died" value="${esc(p.death)}"></div>
  <div class="row"><input data-f="place" placeholder="Place" value="${esc(p.place)}"><input data-f="notes" placeholder="Notes" value="${esc(p.notes)}"></div>
  <div class="lbl">Parents</div>${chips(p.par,'par',p)}<div class="lbl">Spouse(s)</div>${chips(p.sp,'sp',p)}<div class="lbl">Children</div>${chips(kids,'chi',p)}
  <div class="acts"><button data-act="par">+ Parent</button><button data-act="spo">+ Spouse</button><button data-act="chi">+ Child</button><button data-act="rel">Find relation</button><button data-act="net">View network</button></div>
  <div class="lbl ro1">Link an existing person as…</div><div class="row ro1"><select id="lk"><option value="par">Parent</option><option value="spo">Spouse</option><option value="chi">Child</option></select><select id="lt">${opts}</select><button data-act="lnk" style="flex:0 0 auto">Link</button></div>
- <div class="acts" style="justify-content:space-between"><button class="del" data-act="del">Delete</button><button data-act="close">Close</button></div>`;if(RO||!canEdit(p))sh.querySelectorAll('[data-f]').forEach(e=>e.disabled=true);{const dl=sh.querySelector('[data-act=del]');if(dl)dl.hidden=!canDel(p)}sh.hidden=false}
+ <div class="acts" style="justify-content:space-between"><button class="del" data-act="del">Delete</button><button data-act="close">Close</button></div>`;if(RO||!canEdit(p))sh.querySelectorAll('[data-f]').forEach(e=>e.disabled=true);{const dl=sh.querySelector('[data-act=del]');if(dl)dl.hidden=!canDel(p)}sh.hidden=false;renderDup()}
 function addRel(k){const c=P[sel];if(!c)return;let n;
  if(k=='par'){if(c.par.length>=2)return toast('Already has two parents');n=add({});c.par.push(n.id);if(c.par.length==2)link(n,P[c.par[0]])}
- else if(k=='chi')n=add({par:[c.id,...(c.sp.length==1?c.sp:[])]});
+ else if(k=='chi'){n=add({par:[c.id,...(c.sp.length==1?c.sp:[])]});const fa=[c,...c.sp.map(x=>P[x])].find(x=>x&&x.gender=='M'),l=fa?effLast(fa):'';if(l){n.last=l;n._al=1}}
  else{n=add({});link(c,n)}
  save();select(n.id);centerOn(n.id);const f=$('#sheet [data-f=first]');f&&f.focus()}
 function linkExisting(){const c=P[sel],t=P[$('#lt').value],k=$('#lk').value;if(!c||!t)return;if(CB&&!(isDr(c)||isDr(t)))return toast('You can link only your own draft people');
@@ -293,7 +300,7 @@ function importFTT(t){const L=t.split(/\r\n|\r|\n/).filter(x=>x.trim()).slice(1)
  per.forEach(c=>{const f=fam[c[2]];if(f)n[c[0]].par=f.filter(x=>x!='0'&&n[x])});
  for(const k in fam){const[a,b]=fam[k];if(n[a]&&n[b]&&a!=b)link(n[a],n[b])}
  return clean(n)}
-function setData(n){try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch(e){}P=n;sel=null;foc=Object.keys(P)[0]||null;mode='focus';save();$('#sheet').hidden=true;draw();needFit=1;renderData();toast('Loaded '+Object.keys(P).length+' people')}
+function setData(n){P=n;sel=null;foc=Object.keys(P)[0]||null;mode='focus';save();$('#sheet').hidden=true;draw();needFit=1;renderData();toast('Loaded '+Object.keys(P).length+' people')}
 
 /* ---------- central database (Supabase) : read-only sync for now ---------- */
 const SB='https://llunlcxpyqpbylsafrqp.supabase.co',SK='sb_publishable__E0tdZNkY-wkoTzcaB6ZQg_bcpg5hXm';/* publishable key: safe to be public, row rules in the database protect the data */
@@ -307,18 +314,18 @@ function fromRemote(ps,pl,sl,dr){LS={};const mk=(r,st)=>({id:r.id,first:r.first_
  return clean(n)}
 const setSt=t=>{const h=$('#hs');if(h)h.textContent=t};
 let syncing=false,RO=false;
-function setRO(v){RO=v;document.body.classList.toggle('ro',v);try{localStorage.setItem(KEY+'-ro',v?'1':'')}catch(e){}}
+function setEmpty(m){const e=$('#emptymsg');if(e)e.textContent=m}
+function setRO(v){RO=v;document.body.classList.toggle('ro',v)}
 async function syncDown(manual){if(syncing)return;if((ADM||CB)&&BASE&&isDirty()){if(!manual||!confirm('You have unsaved changes. Reload from the database and discard them?'))return}syncing=true;setSt('Syncing…');
  try{if(SES&&!ME)await loadMe();const[ps,pl,sl]=await Promise.all([sbGet('persons?select=id,first_name,last_name,gender,birth_date,death_date,place,notes&status=eq.approved&order=id'),
    sbGet('parent_links?select=child_id,parent_id&status=eq.approved&order=child_id,parent_id'),sbGet('spouse_links?select=a_id,b_id&status=eq.approved&order=a_id,b_id')]);
   if(!ps.length)throw new Error('no people returned - check access rules');
   CB=!!(SES&&ME&&ME.trust_id&&ME.role=='contributor');let dr=null;
   if(CB){const[a,b,c]=await Promise.all([sbGet('persons?select=id,first_name,last_name,gender,birth_date,death_date,place,notes,status&status=in.(draft,pending,rejected)&order=id'),sbGet('parent_links?select=child_id,parent_id,status&status=in.(draft,pending,rejected)&order=child_id,parent_id'),sbGet('spouse_links?select=a_id,b_id,status&status=in.(draft,pending,rejected)&order=a_id,b_id')]);dr={ps:a,pl:b,sl:c}}
-  try{localStorage.setItem(KEY+'-bak',JSON.stringify(P))}catch(e){}
   P=fromRemote(ps,pl,sl,dr);setRO(!(ADM||CB));BASE=snap();setTimeout(showBar,0);sel=null;foc=Object.keys(P)[0]||null;save();$('#sheet').hidden=true;draw();needFit=1;if(!$('#tree').hidden){fit();needFit=0}renderData();
-  const t=new Date().toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});try{localStorage.setItem('ra-last-sync',t)}catch(e){}
+  const t=new Date().toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   setSt('Synced '+t+' · '+Object.keys(P).length+' people');if(manual)toast('Loaded '+Object.keys(P).length+' people from the database')}
- catch(e){let t='';try{t=localStorage.getItem('ra-last-sync')||''}catch(x){}setSt(t?'Offline · saved copy from '+t:'Offline · saved data');if(manual)toast('Could not sync: '+e.message)}
+ catch(e){setSt('No internet connection');if(!Object.keys(P).length)setEmpty('Could not load the family tree. Please check your internet connection and try again.');if(manual)toast('Could not sync: '+e.message)}
  finally{syncing=false}}
 /* ---------- admin editing: every change made in the app is written to the shared database ---------- */
 let ADM=false,CB=false,LS={},BASE=null,pushT=0,pushing=false,again=false;
@@ -338,7 +345,7 @@ function diffSum(){if(!BASE)return null;const B=BASE,N=P;let pe=0,pa=0,pd=0,la=0
 const isDirty=()=>{const d=diffSum();return !!d&&d.n>0};
 function showBar(){const b=$('#savebar');if(!b)return;const d=(ADM||CB)?diffSum():null,n=d?d.n:0;b.hidden=!n;document.body.classList.toggle('dirty',!!n);
  if(n)$('#savemsg').textContent='Unsaved changes: '+[[d.pe,'person edited'],[d.pa,'person added'],[d.pd,'person deleted'],[d.la,'link added'],[d.ld,'link removed']].filter(x=>x[0]).map(x=>x[0]+' '+x[1]).join(', ')}
-function discardChanges(){if(!BASE||!confirm('Discard all unsaved changes?'))return;P=JSON.parse(JSON.stringify(BASE));sel=null;try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}$('#sheet').hidden=true;draw();renderData();showBar();toast('Changes discarded')}
+function discardChanges(){if(!BASE||!confirm('Discard all unsaved changes?'))return;P=JSON.parse(JSON.stringify(BASE));sel=null;$('#sheet').hidden=true;draw();renderData();showBar();toast('Changes discarded')}
 async function dbq(method,path,body){const r=await fetch(`${SB}/rest/v1/${path}`,{method,headers:{...(await authHeaders()),'Content-Type':'application/json',Prefer:'return=minimal'},body:body?JSON.stringify(body):undefined});
  if(!r.ok){let m='';try{m=(await r.json()).message||''}catch(e){}throw new Error(m||('HTTP '+r.status))}}
 async function pushChanges(){if(pushing){again=true;return}pushing=true;
@@ -381,16 +388,16 @@ async function selfTest(){const o=$('#chkout');if(!SES){o.textContent='Sign in f
   L.push('Role: '+r)}catch(e){L.push('⚠️ '+(/Failed to fetch/.test(e.message)?'No internet connection.':e.message))}
  o.textContent=L.join('\n')}
 function renderAcct(){applyRole();const b=$('#lgb'),a=$('#acct');if(b)b.textContent=SES?'Account':'Sign in';if(!a)return;
- a.innerHTML=SES?`<div><b>${esc(SES.email)}</b></div><div class="mut" style="margin:2px 0 8px">Role: ${esc(ME?ME.role:'checking…')}${ME&&!ME.trust_id?' · not linked to a trust yet (needs an invite)':''}</div><button data-act="lout">Sign out</button>`
+ a.innerHTML=SES?`<div><b>${esc(SES.email)}</b></div><div class="mut" style="margin:2px 0 8px">Role: ${esc(ME?ME.role:'checking…')}${ME&&!ME.trust_id?' · not linked to a trust yet (needs an invite)':''}</div><button data-act="pwopen">Change password</button> <button data-act="lout">Sign out</button>`
  :`<div class="mut" style="margin-bottom:8px">Viewing as a guest (read-only). Sign in to contribute.</div><button class="pri" data-act="login">Sign in / Create account</button>`}
-function setLM(){const up=lmode=='up';$('#lt2').textContent=up?'Create account':'Sign in';$('#lname').hidden=!up;$('#lgo').textContent=up?'Create account':'Sign in';$('#lmode').textContent=up?'I already have an account':'New here? Create account';$('#lpw').autocomplete=up?'new-password':'current-password';$('#lmsg').textContent=''}
+function setLM(){const up=lmode=='up';$('#lt2').textContent=up?'Create account':'Sign in';$('#lname').hidden=!up;$('#lgo').textContent=up?'Create account':'Sign in';$('#lmode').textContent=up?'I already have an account':'New here? Create account';$('#lpw').autocomplete=up?'new-password':'current-password';$('#lforgot').hidden=up;$('#lmsg').textContent=''}
 async function doLogin(){const em=$('#lem').value.trim(),pw=$('#lpw').value,msg=m=>$('#lmsg').textContent=m;
  if(!em||pw.length<8)return msg('Enter your email and a password of at least 8 characters.');msg('Please wait…');$('#lgo').disabled=true;
  try{const up=lmode=='up',j=up?await authCall('signup',{email:em,password:pw,data:{full_name:$('#lnm').value.trim()}}):await authCall('token?grant_type=password',{email:em,password:pw}),s=toSes(j);
   if(!s){msg('Account created, but email confirmation is still switched on in the database settings. Ask the admin to turn it off, then sign in.');return}
   saveSes(s);$('#login').hidden=true;$('#lpw').value='';ME=null;renderAcct();toast('Signed in as '+s.email);await redeemPending();await loadMe();renderAcct();syncDown(false)}
  catch(e){msg(/Failed to fetch|NetworkError/i.test(e.message)?'No internet connection.':e.message)}finally{$('#lgo').disabled=false}}
-async function doLogout(){if((ADM||CB)&&BASE&&isDirty()&&!confirm('You have unsaved changes that will be lost. Sign out anyway?'))return;try{await authCall('logout',{},SES&&SES.access_token)}catch(e){}saveSes(null);ME=null;renderAcct();toast('Signed out');syncDown(false)}
+async function doLogout(){$('#accm').hidden=true;if((ADM||CB)&&BASE&&isDirty()&&!confirm('You have unsaved changes that will be lost. Sign out anyway?'))return;try{await authCall('logout',{},SES&&SES.access_token)}catch(e){}saveSes(null);ME=null;renderAcct();toast('Signed out');syncDown(false)}
 /* ---------- invites: admin creates a link, a new person opens it, signs up and gets the role ---------- */
 const lsg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lss=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}};
 let lastInv=null;
@@ -412,7 +419,7 @@ async function redeemPending(){const c=lsg('ra-invite');if(!c||!SES)return;
 async function showInvite(c){try{const r=await fetch(`${SB}/rest/v1/rpc/invite_info`,{method:'POST',headers:{apikey:SK,'Content-Type':'application/json'},body:JSON.stringify({p_code:c})}),j=await r.json();
  if(!j||!j.trust){lss('ra-invite',null);toast('This invite link is not valid any more.');return}
  lmode='up';setLM();$('#linv').textContent='You are invited to join '+j.trust+' as '+j.role+'. Create your account, or sign in if you already have one.';$('#linv').hidden=false;$('#login').hidden=false}catch(e){}}
-async function startInvite(){const q=new URLSearchParams(location.search).get('invite');if(q){lss('ra-invite',q);try{history.replaceState(null,'',location.pathname)}catch(e){}}
+async function startInvite(){if(await startRecovery())return;const q=new URLSearchParams(location.search).get('invite');if(q){lss('ra-invite',q);try{history.replaceState(null,'',location.pathname)}catch(e){}}
  await loadMe();if(SES&&lsg('ra-invite')){await redeemPending();await loadMe()}renderAcct();const c=lsg('ra-invite');if(c&&!SES)showInvite(c)}
 /* ---------- contributor: find the existing relative to attach a new branch to ---------- */
 let ANC=null;
@@ -429,13 +436,51 @@ function openAnchor(){$('#anchor').hidden=false;$('#anq').value='';anSearch();se
 function setAnchor(id){ANC=id;lss(ancKey(),id);$('#anchor').hidden=true;renderAnchor();toast('Your relative: '+nm(P[id]))}
 function renderAnchor(){const c=$('#ancard');if(!c)return;ANC=lsg(ancKey());if(ANC&&!P[ANC])ANC=null;
  c.innerHTML=ANC?`<div class="mut" style="font-size:12px">YOUR RELATIVE IN THE TREE</div><div><b>${esc(nm(P[ANC]))}</b> <small class="mut">${esc(P[ANC].place||'')}</small></div><div class="mut" style="font-size:12px">${esc(anSummary(P[ANC]))}</div><div class="acts"><button data-act="mybranch">Change</button><button data-act="anshow" data-id="${esc(ANC)}">Show in tree</button></div>`:'<div class="mut" style="margin-bottom:8px">Start by finding your relative who is already in the tree.</div>'}
+/* ---------- duplicate warning: "Is this the same person?" while a new person is being typed ---------- */
+let dupT=0;const DISM=new Set();
+const lev=(a,b)=>{const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let r=[...Array(n+1).keys()];for(let i=1;i<=m;i++){let pr=r[0];r[0]=i;for(let j=1;j<=n;j++){const t=r[j];r[j]=Math.min(r[j]+1,r[j-1]+1,pr+(a[i-1]==b[j-1]?0:1));pr=t}}return r[n]};
+const nn=s=>String(s||'').toLowerCase().replace(/[^a-z\u0900-\u097f]/g,'').replace(/ph/g,'f').replace(/sh/g,'s').replace(/w/g,'v').replace(/h/g,'').replace(/(.)\1+/g,'$1').replace(/e/g,'i').replace(/o/g,'u');
+function dupCandidates(p){const f=nn(p.first);if(f.length<2)return[];const l=nn(p.last||effLast(p)),rel=x=>[...x.par,...x.sp,...kidsOf(x.id)].filter(i=>P[i]),pr=new Set(rel(p)),pn=new Set([...pr].map(i=>nn(P[i].first)).filter(Boolean)),out=[];
+ for(const q of Object.values(P)){if(q.id==p.id||(q.st&&q.st!='approved')||pr.has(q.id))continue;if(p.gender&&q.gender&&p.gender!=q.gender)continue;const g=nn(q.first);if(!g)continue;
+  let s=0;if(g==f)s=3;else if(f.length>=4&&g.length>=4&&lev(f,g)<=1)s=2;else continue;
+  const ql=nn(q.last||effLast(q));if(l&&ql){if(l==ql)s+=2;else if(lev(l,ql)<=1)s+=1}
+  if(p.place&&q.place&&nn(p.place)==nn(q.place))s+=1;
+  let h=0;rel(q).forEach(i=>{if(pn.has(nn(P[i].first)))h++});s+=Math.min(h,2)*2;
+  if(s>=5)out.push({q,s})}
+ return out.sort((a,b)=>b.s-a.s).slice(0,3)}
+function renderDup(){const b=$('#dupbox');if(!b)return;const p=P[sel];b.innerHTML='';if(!p||!canEdit(p)||!(p.st=='draft'||(ADM&&BASE&&!BASE[p.id])))return;
+ const L=dupCandidates(p).filter(c=>!DISM.has(p.id+'|'+c.q.id));if(!L.length)return;
+ b.innerHTML=`<div class="card" style="margin:8px 0;border-left:5px solid #d98c1f"><b>⚠ Is this the same person?</b><div class="mut" style="font-size:12px;margin-bottom:4px">Someone similar is already in the tree. Choose “Same person” to use them instead of adding a duplicate.</div>${L.map(c=>`<div class="person" style="cursor:default"><span>${esc(nm(c.q))} <small class="mut">${c.s>=7?'likely':'possible'}</small><br><small>${esc(c.q.place||'')}${c.q.place?' · ':''}${esc(anSummary(c.q))}</small></span><span><button class="pri" data-dm="${esc(p.id)}:${esc(c.q.id)}">Same person</button> <button data-dx="${esc(p.id)}:${esc(c.q.id)}">Not same</button></span></div>`).join('')}</div>`}
+function mergeInto(did,eid){const d=P[did],e=P[eid];if(!d||!e||did==eid)return;
+ d.par.forEach(q=>{if(q!=eid&&P[q]&&!e.par.includes(q)&&e.par.length<2)e.par.push(q)});
+ d.sp.forEach(q=>{if(q!=eid&&P[q]){P[q].sp=P[q].sp.filter(x=>x!=did);if(!P[q].sp.includes(eid))P[q].sp.push(eid);if(!e.sp.includes(q))e.sp.push(q)}});
+ Object.values(P).forEach(c=>{if(c.par.includes(did)){c.par=c.par.filter(x=>x!=did);if(c.id!=eid&&!c.par.includes(eid))c.par.push(eid)}});
+ Object.values(P).forEach(x=>{x.sp=x.sp.filter(y=>y!=did)});delete P[did];save();select(eid);draw();toast('Linked to the existing person')}
+/* ---------- password reset / change ---------- */
+async function authPut(path,body,token){const r=await fetch(`${SB}/auth/v1/${path}`,{method:'PUT',headers:{apikey:SK,'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)});
+ let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.msg||j.error_description||j.message||('Error '+r.status));return j}
+async function forgotPw(){const em=$('#lem').value.trim(),m=t=>$('#lmsg').textContent=t;if(!em)return m('Type your email above first, then tap Forgot password.');m('Sending…');
+ try{await authCall('recover?redirect_to='+encodeURIComponent(location.origin+location.pathname),{email:em});m('If this email has an account, a reset link has been sent. Check your inbox and spam folder, then open the link on this phone.')}
+ catch(e){m(/Failed to fetch|NetworkError/i.test(e.message)?'No internet connection.':'The reset email could not be sent. Please ask an admin to reset your password.')}}
+let pwMode='change';
+function openPw(mode){pwMode=mode;$('#pwt').textContent=mode=='recovery'?'Set a new password':'Change password';$('#pw1').value=$('#pw2').value='';$('#pwmsg').textContent='';$('#accm').hidden=true;$('#login').hidden=true;$('#pwm').hidden=false}
+async function savePw(){const a=$('#pw1').value,b=$('#pw2').value,m=t=>$('#pwmsg').textContent=t;if(a.length<8)return m('Use at least 8 characters.');if(a!=b)return m('The two passwords do not match.');m('Saving…');$('#pwsave').disabled=true;
+ try{await authHeaders();if(!SES)throw new Error('Please sign in again.');await authPut('user',{password:a},SES.access_token);$('#pwm').hidden=true;toast('Password changed');if(pwMode=='recovery'){await loadMe();renderAcct();syncDown(false)}}
+ catch(e){m(/different from the old|same password/i.test(e.message)?'Choose a password you have not used before.':(/Failed to fetch|NetworkError/i.test(e.message)?'No internet connection.':e.message))}finally{$('#pwsave').disabled=false}}
+async function startRecovery(){const h=new URLSearchParams(location.hash.slice(1));
+ if(h.get('error_code')){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}toast('This reset link has expired. Please request a new one.');return false}
+ if(h.get('type')!='recovery'||!h.get('access_token'))return false;const at=h.get('access_token');try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+ try{const r=await fetch(`${SB}/auth/v1/user`,{headers:{apikey:SK,Authorization:'Bearer '+at}}),u=await r.json();if(!r.ok)throw 0;
+  saveSes({access_token:at,refresh_token:h.get('refresh_token')||'',expires_at:Math.floor(Date.now()/1000)+(+h.get('expires_in')||3600),email:u.email||'',uid:u.id||''});ME=null;await loadMe();renderAcct();openPw('recovery');return true}
+ catch(e){toast('This reset link is not valid any more. Please request a new one.');return false}}
+function openAcc(){$('#accinfo').innerHTML=`<div><b>${esc(SES.email)}</b></div><div class="mut" style="margin:2px 0 10px">Role: ${esc(myRole())}</div>`;$('#accm').hidden=false}
 /* ---------- views ---------- */
 function show(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==t));
  ['tree','people','rel','data'].forEach(s=>$('#'+s).hidden=s!=t);if(t!='tree')$('#sheet').hidden=true;
  if(t=='tree'&&needFit){fit();needFit=0}if(t=='people')renderList();if(t=='rel')fillRel();if(t=='data')renderData()}
 function renderList(){const q=$('#q').value.toLowerCase(),a=Object.values(P).filter(p=>nm(p).toLowerCase().includes(q)).sort((x,y)=>nm(x).localeCompare(nm(y)));
  $('#list').innerHTML=a.map(p=>`<div class="person" data-go="${esc(p.id)}"><span>${esc(nm(p))}<br><small>${esc(dates(p))}</small></span><small>${p.par.length?'↑'+p.par.length+' ':''}${p.sp.length?'♥'+p.sp.length:''}</small></div>`).join('')||'<p class="mut">Nobody yet.</p>'}
-function renderData(){renderAcct();renderAnchor();const a=Object.values(P);$('#stat').textContent=a.length+' people · '+a.reduce((s,p)=>s+p.sp.length,0)/2+' couples · '+a.reduce((s,p)=>s+p.par.length,0)+' parent links';$('#csv').value=toCSV()}
+function renderData(){renderAcct();renderAnchor();const a=Object.values(P);$('#stat').textContent=a.length+' people · '+a.reduce((s,p)=>s+p.sp.length,0)/2+' couples · '+a.reduce((s,p)=>s+p.par.length,0)+' parent links'}
 async function download(){const d=window.claude?await claude.use('downloads'):null;
  if(!d){try{const b=new Blob(['\ufeff'+toCSV()],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='relatives.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}catch(e){toast('Download unavailable here — copy the text instead')}return}
  try{await d.save({filename:'relatives.csv',data:'\ufeff'+toCSV()})}catch(e){if(e.code!='declined')toast('Not saved ('+(e.code||'error')+') — copy the text instead')}}
@@ -555,8 +600,8 @@ const up=e=>{const tapOk=drag&&!drag.m&&Object.keys(ptr).length==1&&e.type=='poi
 svg.onpointerup=up;svg.onpointercancel=up;
 svg.onwheel=e=>{e.preventDefault();const p=rel(e);if(e.shiftKey&&mode=='full')rotTo(rAcc+(e.deltaY>0?NOTCH:-NOTCH),p.x,p.y);else zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)};
 $('#rot').oninput=e=>{wake();const c=ctr();rotTo(rCur-view.r+(+e.target.value),c[0],c[1])};
-$('#sheet').oninput=e=>{const f=e.target.dataset.f;if(f&&P[sel]){P[sel][f]=e.target.value;save();draw()}};
-$('#sheet').onchange=e=>{if(e.target.dataset.f=='gender')draw()};
+$('#sheet').oninput=e=>{const f=e.target.dataset.f;if(f&&P[sel]){P[sel][f]=e.target.value;if(f=='last')P[sel]._al=0;save();draw();clearTimeout(dupT);dupT=setTimeout(renderDup,300)}};
+$('#sheet').onchange=e=>{if(e.target.dataset.f=='gender'){const p=P[sel];if(p&&p._al&&p.gender=='F'){p.last='';p._al=0;save();openSheet()}draw();renderDup()}};
 $('#q').oninput=renderList;$('#ra').onchange=$('#rb').onchange=renderRel;
 function decode(b){const u=new Uint8Array(b),e=u[0]==255&&u[1]==254?'utf-16le':u[0]==254&&u[1]==255?'utf-16be':'utf-8';return new TextDecoder(e).decode(u)}
 function doImport(t){try{t=t.replace(/^\ufeff/,'');if(!t.trim())return toast('Nothing to import');
@@ -564,15 +609,15 @@ function doImport(t){try{t=t.replace(/^\ufeff/,'');if(!t.trim())return toast('No
  if(!Object.keys(n).length)return toast('No people found — is this a CSV from this app or a .ftt file?');setData(n);show('tree')}catch(x){toast('Import failed: '+(x.message||x))}}
 $('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;toast('Reading '+f.name+'…');const rd=new FileReader();
  rd.onload=()=>doImport(decode(rd.result));rd.onerror=()=>toast('Could not read that file');rd.readAsArrayBuffer(f);e.target.value=''};
-document.addEventListener('click',e=>{const ap=e.target.closest('[data-ap]');if(ap){anPick(ap.dataset.ap);return}const rv=e.target.closest('[data-rv]');if(rv){revokeInv(rv.dataset.rv);return}const u=e.target.closest('[data-un]');if(u){unlink(u.dataset.un);return}const t=e.target.closest('[data-tab],[data-act],[data-go]');if(!t)return;
+document.addEventListener('click',e=>{const dm=e.target.closest('[data-dm]');if(dm){const[x,y]=dm.dataset.dm.split(':');mergeInto(x,y);return}const dx=e.target.closest('[data-dx]');if(dx){DISM.add(dx.dataset.dx.replace(':','|'));renderDup();return}const ap=e.target.closest('[data-ap]');if(ap){anPick(ap.dataset.ap);return}const rv=e.target.closest('[data-rv]');if(rv){revokeInv(rv.dataset.rv);return}const u=e.target.closest('[data-un]');if(u){unlink(u.dataset.un);return}const t=e.target.closest('[data-tab],[data-act],[data-go]');if(!t)return;
  if(t.dataset.tab)return show(t.dataset.tab);
  if(t.dataset.go){show('tree');if(mode!='full')focusOn(t.dataset.go);else{select(t.dataset.go);centerOn(t.dataset.go)}return}
  const a=t.dataset.act,r=svg.getBoundingClientRect();
  if(a=='chk'){selfTest();return}
- if(a=='mybranch'){openAnchor();return}if(a=='mybr2'){if(!ANC||!P[ANC]){toast('First tap Find my relative');return}show('tree');focusOn(ANC);select(ANC);toast('Tap + Parent, + Spouse or + Child to add your family. Everything you add is a draft until an admin approves it.');return}if(a=='anclose'){$('#anchor').hidden=true;return}if(a=='anyes'){setAnchor(t.dataset.id);return}
+ if(a=='forgot'){forgotPw();return}if(a=='pwopen'){openPw('change');return}if(a=='pwsave'){savePw();return}if(a=='pwclose'){$('#pwm').hidden=true;return}if(a=='accclose'){$('#accm').hidden=true;return}if(a=='mybranch'){openAnchor();return}if(a=='mybr2'){if(!ANC||!P[ANC]){toast('First tap Find my relative');return}show('tree');focusOn(ANC);select(ANC);toast('Tap + Parent, + Spouse or + Child to add your family. Everything you add is a draft until an admin approves it.');return}if(a=='anclose'){$('#anchor').hidden=true;return}if(a=='anyes'){setAnchor(t.dataset.id);return}
  if(a=='anshow'){$('#anchor').hidden=true;show('tree');focusOn(t.dataset.id);return}if(a=='anagain'){$('#anpick').hidden=true;anSearch();$('#anq').focus();return}
  if(a=='savechg'){pushChanges();return}if(a=='discard'){discardChanges();return}
- if(a=='login'){if(SES){if(myRole()=='viewer'){if(confirm('Signed in as '+SES.email+'. Sign out?'))doLogout()}else show('data')}else{lmode='in';setLM();$('#login').hidden=false}return}
+ if(a=='login'){if(SES)openAcc();else{lmode='in';setLM();$('#login').hidden=false}return}
  if(a=='inv'){$('#invbox').hidden=!$('#invbox').hidden;if(!$('#invbox').hidden)listInvites();return}if(a=='mkinv'){mkInvite();return}
  if(a=='ivcopy'){copyText(lastInv.L);return}if(a=='ivwa'){window.open('https://wa.me/?text='+encodeURIComponent('आपको हमारे समाज के पारिवारिक वृक्ष में आमंत्रित किया गया है ('+lastInv.role+'). लिंक खोलें, अपना खाता बनाएँ:\nYou are invited to our community family tree as '+lastInv.role+'. Open the link and create your account:\n'+lastInv.L),'_blank');return}
  if(a=='lgo'){doLogin();return}if(a=='lmode'){lmode=lmode=='in'?'up':'in';setLM();return}if(a=='lclose'){$('#login').hidden=true;return}if(a=='lout'){doLogout();return}
@@ -581,10 +626,10 @@ document.addEventListener('click',e=>{const ap=e.target.closest('[data-ap]');if(
  else if(a=='par'||a=='chi'||a=='spo')addRel(a);
  else if(a=='lnk')linkExisting();else if(a=='del')del();else if(a=='close')select(null);
  else if(a=='zi')zoomAt(1.25,r.width/2,r.height/2);else if(a=='zo')zoomAt(.8,r.width/2,r.height/2);else if(a=='fit')fit();
- else if(a=='dl')download();else if(a=='cp')copy();else if(a=='ip')doImport($('#paste').value);else if(a=='rdet'){relDet=!relDet;renderRel()}else if(a=='net')focusOn(sel);else if(a=='rtree'&&lastRel){rp=lastRel;mode='path';sel=null;$('#sheet').hidden=true;show('tree');draw();fit()}else if(a=='pclose')focusOn(rp.A);else if(a=='rl'||a=='rr'||a=='r0'){const c=ctr();rotTo(a=='rl'?rAcc-15:a=='rr'?rAcc+15:rCur-view.r,c[0],c[1])}else if(a=='snd'){snd=!snd;$('#sndb').textContent=snd?'🔊':'🔇'}else if(a=='sync')syncDown(true);else if(a=='mode'){mode=mode=='focus'?'full':'focus';if(mode=='focus'&&sel&&P[sel])foc=sel;draw();fit();syF&&syF()}
+ else if(a=='dl')download();else if(a=='ip')doImport($('#paste').value);else if(a=='rdet'){relDet=!relDet;renderRel()}else if(a=='net')focusOn(sel);else if(a=='rtree'&&lastRel){rp=lastRel;mode='path';sel=null;$('#sheet').hidden=true;show('tree');draw();fit()}else if(a=='pclose')focusOn(rp.A);else if(a=='rl'||a=='rr'||a=='r0'){const c=ctr();rotTo(a=='rl'?rAcc-15:a=='rr'?rAcc+15:rCur-view.r,c[0],c[1])}else if(a=='snd'){snd=!snd;$('#sndb').textContent=snd?'🔊':'🔇'}else if(a=='sync')syncDown(true);else if(a=='mode'){mode=mode=='focus'?'full':'focus';if(mode=='focus'&&sel&&P[sel])foc=sel;draw();fit();syF&&syF()}
  else if(a=='rel'){const id=sel;show('rel');fillRel(id)}
  else if(a=='swap'){const v=$('#ra').value;$('#ra').value=$('#rb').value;$('#rb').value=v;syA();syB();renderRel()}
- else if(a=='undo'){try{const b=JSON.parse(localStorage.getItem(KEY+'-bak'));if(b)setData(b);else toast('No backup yet')}catch(x){toast('No backup yet')}}});
-try{P=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){P={}}
-foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();try{setRO(localStorage.getItem(KEY+'-ro')=='1')}catch(e){}syncDown(false);startInvite();$('#anq').oninput=anSearch;window.addEventListener('beforeunload',e=>{if((ADM||CB)&&BASE&&isDirty()){e.preventDefault();e.returnValue=''}});$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
+ });
+P={};try{localStorage.removeItem(KEY);localStorage.removeItem(KEY+'-bak');localStorage.removeItem(KEY+'-ro');localStorage.removeItem('ra-last-sync')}catch(e){}
+foc=Object.keys(P)[0]||null;draw();requestAnimationFrame(()=>{fit();needFit=0});syA=setupPick('a');syB=setupPick('b');syF=setupPick('f');syF();setRO(true);syncDown(false);startInvite();$('#anq').oninput=anSearch;$('#pw2').onkeydown=e=>{if(e.key=='Enter')savePw()};window.addEventListener('beforeunload',e=>{if((ADM||CB)&&BASE&&isDirty()){e.preventDefault();e.returnValue=''}});$('#lpw').onkeydown=e=>{if(e.key=='Enter')doLogin()};
 </script></body></html>
